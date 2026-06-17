@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: research_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Option 1: Map persistent volumes to the host machine
+      - ./backend/uploads:/app/uploads
+      - ./backend/reports:/app/reports
+      - ./backend/chroma_db:/app/chroma_db
+      - ./backend/research_assistant.db:/app/research_assistant.db
+    environment:
+      # We rely on the .env file being copied inside the container via Dockerfile,
+      # or you can explicitly declare an env_file here:
+      # env_file: ./backend/.env
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: research_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
