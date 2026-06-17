@@ -51,7 +51,7 @@ def send_otp_email(to_email: str, otp: str):
 
         # Connect to Gmail SMTP
         logger.info(f"Connecting to SMTP server to send OTP to {to_email}...")
-        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=5)
         server.starttls()
         server.login(smtp_email, smtp_password)
         server.send_message(msg)

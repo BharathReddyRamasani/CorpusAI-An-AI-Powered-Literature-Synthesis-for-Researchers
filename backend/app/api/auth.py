@@ -84,7 +84,8 @@ async def register(
     # Send email in background
     background_tasks.add_task(send_otp_email, user.email, otp)
 
-    logger.info(f"New user registered, OTP sent: {user.email} (id={user.id})")
+    logger.info(f"New user registered: {user.email} (id={user.id})")
+    logger.info(f"HUGGING FACE DEMO MODE - YOUR OTP IS: {otp}")
     return RegisterResponse(
         message="Registration successful. Please check your email for the OTP.",
         user=UserResponse.model_validate(user),
