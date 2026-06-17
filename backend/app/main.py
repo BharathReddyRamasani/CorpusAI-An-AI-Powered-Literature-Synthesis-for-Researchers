@@ -15,7 +15,9 @@ import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+import os
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -154,6 +156,21 @@ All endpoints (except `/api/auth/register` and `/api/auth/login`) require a **Be
 # ── Application Instance ──────────────────────────────────────────────────────
 app = create_app()
 
+# ── Serve React Frontend ──────────────────────────────────────────────────────
+frontend_dist = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend_dist")
+if os.path.exists(frontend_dist):
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+
+from fastapi.responses import FileResponse
+
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc):
+    if request.url.path.startswith("/api"):
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    index_path = os.path.join(frontend_dist, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return JSONResponse({"detail": "Not Found"}, status_code=404)
 
 # ── Entry Point ───────────────────────────────────────────────────────────────
 if __name__ == "__main__":
