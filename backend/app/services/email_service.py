@@ -58,5 +58,28 @@ def send_otp_email(to_email: str, otp: str):
         logger.info(f"OTP email successfully sent to {to_email}")
         
     except Exception as e:
-        logger.error(f"Failed to send OTP email to {to_email}: {str(e)}")
-        raise e
+        logger.error(f"SMTP failed to send OTP: {str(e)}. Attempting HTTP fallback via Resend API...")
+        resend_key = os.getenv("RESEND_API_KEY")
+        if resend_key:
+            import httpx
+            
+            headers = {
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "from": "Acme <onboarding@resend.dev>",
+                "to": [to_email],
+                "subject": "Your AI Research Assistant Verification Code",
+                "html": html
+            }
+            try:
+                res = httpx.post("https://api.resend.com/emails", headers=headers, json=payload, timeout=10)
+                res.raise_for_status()
+                logger.info(f"OTP email successfully sent to {to_email} via Resend HTTP API")
+            except Exception as http_e:
+                logger.error(f"HTTP fallback also failed: {str(http_e)}")
+                raise http_e
+        else:
+            logger.error("No RESEND_API_KEY found for HTTP fallback. Email could not be sent.")
+            raise e
