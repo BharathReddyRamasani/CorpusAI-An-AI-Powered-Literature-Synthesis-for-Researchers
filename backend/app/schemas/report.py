@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 
 class ReportRequest(BaseModel):
-    format: Literal["pdf", "docx"] = Field(default="pdf", examples=["pdf"])
+    format: Literal["pdf", "docx", "pptx"] = Field(default="pdf", examples=["pdf"])
 
 
 class ReportResponse(BaseModel):

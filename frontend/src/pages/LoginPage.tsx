@@ -177,16 +177,23 @@ const LoginPage = () => {
                 error={errors.email?.message}
               />
 
-              <Input
-                label="Password"
-                type="password"
-                placeholder="••••••••"
-                icon={<Lock size={20} />}
-                {...register('password')}
-                error={errors.password?.message}
-              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <Input
+                  label="Password"
+                  type="password"
+                  placeholder="••••••••"
+                  icon={<Lock size={20} />}
+                  {...register('password')}
+                  error={errors.password?.message}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Link to="/forgot-password" style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 500 }}>
+                    Forgot password?
+                  </Link>
+                </div>
+              </div>
 
-              <Button type="submit" size="lg" isLoading={isLoading} style={{ marginTop: '1rem', width: '100%', background: 'var(--accent-primary)', color: 'white' }}>
+              <Button type="submit" size="lg" isLoading={isLoading} style={{ marginTop: '0.5rem', width: '100%', background: 'var(--accent-primary)', color: 'white' }}>
                 Sign In
               </Button>
             </form>

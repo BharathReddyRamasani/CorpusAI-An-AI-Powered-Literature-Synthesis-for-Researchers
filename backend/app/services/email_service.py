@@ -49,10 +49,9 @@ def send_otp_email(to_email: str, otp: str):
         
         msg.attach(MIMEText(html, "html"))
 
-        # Connect to Gmail SMTP
+        # Connect to Gmail SMTP (Using SSL on Port 465 to bypass firewall blocks)
         logger.info(f"Connecting to SMTP server to send OTP to {to_email}...")
-        server = smtplib.SMTP("smtp.gmail.com", 587, timeout=5)
-        server.starttls()
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15)
         server.login(smtp_email, smtp_password)
         server.send_message(msg)
         server.quit()

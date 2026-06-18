@@ -47,3 +47,40 @@ Generate a formal, structured research report with the following sections. Use p
 
 ## 7. Conclusion
 [Overall assessment of the paper's contribution to the field and its practical implications]"""
+
+PPT_SYSTEM_PROMPT = """You are an expert presentation creator specializing in summarizing research papers.
+Generate a structured slide deck presentation. Use a simple markdown format where `## Slide N: Title` defines a new slide and `-` defines bullet points."""
+
+PPT_USER_PROMPT = """Create a highly professional presentation summarizing the following research paper.
+
+=== PAPER METADATA ===
+Title: {title}
+Authors: {authors}
+Abstract: {abstract}
+
+=== PAPER SUMMARY ===
+{summary}
+
+=== CITATIONS ({citation_count} total) ===
+{citations}
+
+=== QUESTION & ANSWER INSIGHTS ===
+{qa_insights}
+
+---
+
+Generate a structured presentation. Use exactly this format for each slide:
+## Slide Title
+- Bullet point 1
+- Bullet point 2
+- Bullet point 3
+
+Make the bullet points concise, impactful, and easy to read on a presentation slide. Do not write long paragraphs.
+
+Create exactly 6 slides with the following titles:
+## 1. Title Slide (Include Paper Title and Authors)
+## 2. Executive Summary (High-level overview)
+## 3. Methodology (Approach and datasets)
+## 4. Key Findings (Results and discoveries)
+## 5. Q&A Insights (Key points from chat history)
+## 6. Conclusion & Future Scope (Implications and next steps)"""

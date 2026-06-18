@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import Layout from './components/layout/Layout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import DashboardPage from './pages/DashboardPage'
 import PapersPage from './pages/PapersPage'
 import PaperDetailPage from './pages/PaperDetailPage'
@@ -78,6 +79,14 @@ const AnimatedRoutes = () => {
           element={
             <PublicRoute>
               <PageWrapper><RegisterPage /></PageWrapper>
+            </PublicRoute>
+          } 
+        />
+        <Route 
+          path="/forgot-password" 
+          element={
+            <PublicRoute>
+              <PageWrapper><ForgotPasswordPage /></PageWrapper>
             </PublicRoute>
           } 
         />

@@ -29,18 +29,52 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Auto logout if token is expired/invalid
-      useAuthStore.getState().logout()
-      toast.error('Session expired. Please log in again.')
-      // Optional: window.location.href = '/login' (if not handled by router)
+      // Auto logout if token is expired/invalid, but NOT if they are just typing the wrong password/OTP on an auth form
+      const isAuthRequest = error.config?.url?.includes('/api/auth/login') || 
+                            error.config?.url?.includes('/api/auth/verify-otp') ||
+                            error.config?.url?.includes('/api/auth/reset-password');
+      
+      if (!isAuthRequest) {
+        useAuthStore.getState().logout()
+        toast.error('Session expired. Please log in again.')
+      }
     }
     
     // Extract error message from API if available
-    const message = error.response?.data?.detail || error.message || 'An unexpected error occurred'
+    let message: string = 'An unexpected error occurred'
+    try {
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail
+        if (typeof detail === 'string') {
+          message = detail
+        } else if (Array.isArray(detail)) {
+          message = detail.map((err: any) => err.msg || JSON.stringify(err)).join(', ')
+        } else {
+          message = JSON.stringify(detail)
+        }
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message
+      } else if (error.message) {
+        message = error.message
+      }
+      
+      // Absolute safety net to prevent React crash
+      if (typeof message !== 'string') {
+        message = JSON.stringify(message)
+      }
+    } catch (e) {
+      message = 'An unexpected error occurred'
+    }
     
-    // We don't want to show toasts for every 404, only specific errors
-    if (error.response?.status !== 404 && error.response?.status !== 401) {
-       toast.error(message)
+    // Show toasts for errors, but suppress 404s and global 401s (auth 401s should still show!)
+    const isAuthRequest = error.config?.url?.includes('/api/auth/login') || 
+                          error.config?.url?.includes('/api/auth/verify-otp') ||
+                          error.config?.url?.includes('/api/auth/reset-password');
+
+    if (error.response?.status !== 404) {
+      if (error.response?.status !== 401 || isAuthRequest) {
+        toast.error(message)
+      }
     }
 
     return Promise.reject(error)

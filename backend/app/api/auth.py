@@ -27,6 +27,8 @@ from app.schemas.auth import (
     UpdateProfileRequest,
     UserResponse,
     VerifyOTPRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 from app.services.auth_service import (
     create_access_token,
@@ -232,3 +234,81 @@ async def change_password(
     await db.flush()
     logger.info(f"Password changed for user id={current_user.id}")
     return {"success": True, "message": "Password changed successfully."}
+
+
+# ── POST /api/auth/forgot-password ────────────────────────────────────────────
+
+@router.post(
+    "/forgot-password",
+    summary="Request a password reset OTP",
+)
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Generate a 6-digit OTP and send it via email for password reset."""
+    result = await db.execute(select(User).where(User.email == payload.email))
+    user = result.scalar_one_or_none()
+
+    # To prevent email enumeration, we always return success even if user doesn't exist
+    if not user:
+        logger.info(f"Forgot password requested for non-existent email: {payload.email}")
+        return {"success": True, "message": "If an account with that email exists, an OTP has been sent."}
+
+    # Generate 6 digit OTP
+    otp = "".join(random.choices(string.digits, k=6))
+    user.otp = otp
+    user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+    
+    await db.flush()
+    await db.refresh(user)
+
+    # Send email in background
+    background_tasks.add_task(send_otp_email, user.email, otp)
+    logger.info(f"Password reset OTP requested for user: {user.email}")
+    logger.info(f"HUGGING FACE DEMO MODE - YOUR OTP IS: {otp}")
+
+    return {"success": True, "message": "If an account with that email exists, an OTP has been sent."}
+
+
+# ── POST /api/auth/reset-password ─────────────────────────────────────────────
+
+@router.post(
+    "/reset-password",
+    summary="Reset password using OTP",
+)
+async def reset_password(
+    payload: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Verify OTP and set a new password."""
+    result = await db.execute(select(User).where(User.email == payload.email))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise UnauthorizedException("Invalid email or OTP.")
+
+    if user.otp != payload.otp:
+        raise UnauthorizedException("Invalid OTP.")
+
+    # Check expiration
+    expires_at = user.otp_expires_at
+    if not expires_at:
+        raise UnauthorizedException("No OTP request found.")
+        
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+    if datetime.now(timezone.utc) > expires_at:
+        raise UnauthorizedException("OTP has expired. Please request a new one.")
+
+    # Verify success: update password and clear OTP
+    user.password_hash = hash_password(payload.new_password)
+    user.otp = None
+    user.otp_expires_at = None
+    await db.flush()
+
+    logger.info(f"Password successfully reset for user: {user.email}")
+
+    return {"success": True, "message": "Password has been successfully reset. You can now log in."}

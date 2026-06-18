@@ -60,6 +60,14 @@ class VerifyOTPRequest(BaseModel):
     email: EmailStr = Field(..., examples=["bharath@gmail.com"])
     otp: str = Field(..., min_length=6, max_length=6, examples=["123456"])
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr = Field(..., examples=["bharath@gmail.com"])
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr = Field(..., examples=["bharath@gmail.com"])
+    otp: str = Field(..., min_length=6, max_length=6, examples=["123456"])
+    new_password: str = Field(..., min_length=6, max_length=128, examples=["new_secure_password"])
+
 # ── Response Schemas ──────────────────────────────────────────────────────────
 
 class TokenResponse(BaseModel):

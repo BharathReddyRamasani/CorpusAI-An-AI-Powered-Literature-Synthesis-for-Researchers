@@ -46,5 +46,15 @@ export const authApi = {
   changePassword: async (data: any): Promise<{ success: boolean; message: string }> => {
     const response = await api.put('/api/auth/change-password', data)
     return response.data
+  },
+
+  forgotPassword: async (data: { email: string }): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post('/api/auth/forgot-password', data)
+    return response.data
+  },
+
+  resetPassword: async (data: any): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post('/api/auth/reset-password', data)
+    return response.data
   }
 }
