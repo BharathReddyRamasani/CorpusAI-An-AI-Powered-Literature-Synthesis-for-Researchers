@@ -58,28 +58,43 @@ def send_otp_email(to_email: str, otp: str):
         logger.info(f"OTP email successfully sent to {to_email}")
         
     except Exception as e:
-        logger.error(f"SMTP failed to send OTP: {str(e)}. Attempting HTTP fallback via Resend API...")
-        resend_key = os.getenv("RESEND_API_KEY")
-        if resend_key:
+        logger.error(f"SMTP failed to send OTP: {str(e)}. Attempting HTTP fallback via Brevo API...")
+        
+        # Now using Brevo (formerly Sendinblue) which allows sending from Gmail
+        brevo_key = os.getenv("BREVO_API_KEY")
+        if brevo_key:
             import httpx
             
             headers = {
-                "Authorization": f"Bearer {resend_key}",
-                "Content-Type": "application/json"
+                "accept": "application/json",
+                "api-key": brevo_key,
+                "content-type": "application/json"
             }
+            
             payload = {
-                "from": "Acme <onboarding@resend.dev>",
-                "to": [to_email],
+                "sender": {
+                    "name": "AI Research Assistant",
+                    "email": "ramasanibharathreddy2004@gmail.com"
+                },
+                "to": [
+                    {
+                        "email": to_email
+                    }
+                ],
                 "subject": "Your AI Research Assistant Verification Code",
-                "html": html
+                "htmlContent": html
             }
+            
             try:
-                res = httpx.post("https://api.resend.com/emails", headers=headers, json=payload, timeout=10)
+                res = httpx.post("https://api.brevo.com/v3/smtp/email", headers=headers, json=payload, timeout=15)
                 res.raise_for_status()
-                logger.info(f"OTP email successfully sent to {to_email} via Resend HTTP API")
+                logger.info(f"OTP email successfully sent to {to_email} via Brevo HTTP API")
             except Exception as http_e:
-                logger.error(f"HTTP fallback also failed: {str(http_e)}")
+                logger.error(f"Brevo HTTP fallback failed: {str(http_e)}")
+                # If there's response data, log it to help debug
+                if hasattr(http_e, 'response') and http_e.response:
+                    logger.error(f"Brevo API Response: {http_e.response.text}")
                 raise http_e
         else:
-            logger.error("No RESEND_API_KEY found for HTTP fallback. Email could not be sent.")
+            logger.error("No BREVO_API_KEY found for HTTP fallback. Email could not be sent.")
             raise e
