@@ -375,5 +375,15 @@ async def generate_report_stream(
     else:
         file_bytes = await loop.run_in_executor(None, _export_docx_stream, content, paper_title)
 
+    # Store report record even for streaming so the dashboard count updates
+    from app.models.report import Report
+    report = Report(
+        paper_id=paper_id,
+        report_path="streamed_in_memory",
+        format=fmt,
+    )
+    db.add(report)
+    await db.flush()
+
     logger.info(f"Dynamic report generated in memory format={fmt}")
     return file_bytes
