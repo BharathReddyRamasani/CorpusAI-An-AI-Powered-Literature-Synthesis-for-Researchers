@@ -95,5 +95,5 @@ class RegisterResponse(BaseModel):
 class LoginResponse(BaseModel):
     success: bool = True
     message: str = "Login successful."
-    token: TokenResponse
+    token: Optional[TokenResponse] = None
     user: UserResponse
