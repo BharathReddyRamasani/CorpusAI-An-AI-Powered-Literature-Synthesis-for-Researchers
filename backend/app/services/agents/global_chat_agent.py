@@ -9,7 +9,6 @@ import logging
 from typing import Literal
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, StateGraph
 from app.services.agents.tools import ToolNode
 
