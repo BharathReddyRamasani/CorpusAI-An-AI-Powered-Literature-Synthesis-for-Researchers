@@ -54,7 +54,7 @@ SECTION_PATTERNS = {
     "methodology": r"^(\d+\.?\s*)?(methodology|methods?|approach|proposed method|framework|system design)\s*$",
     "results": r"^(\d+\.?\s*)?(results?|experiments?|evaluation|performance|discussion)\s*$",
     "conclusion": r"^(\d+\.?\s*)?(conclusion|concluding remarks|summary|future work)\s*$",
-    "references": r"^(references?|bibliography|works cited)\s*$",
+    "references": r"^(\d+\.?\s*)?(references?|bibliography|works cited)\s*$",
 }
 
 
@@ -181,3 +181,36 @@ def extract_pdf(file_path: str | Path) -> PaperSections:
         raise
 
     return result
+
+def extract_pdf_highlights(file_path: str | Path) -> str:
+    """
+    Extract highlighted text from a PDF file using PyMuPDF.
+    Returns a concatenated string of all highlighted text.
+    """
+    import fitz
+    
+    file_path = Path(file_path)
+    if not file_path.exists():
+        return ""
+        
+    highlights = []
+    try:
+        doc = fitz.open(str(file_path))
+        for page in doc:
+            annot = page.first_annot
+            while annot:
+                if annot.type[0] == 8: # 8 corresponds to Highlight annotation
+                    rect = annot.rect
+                    text = page.get_textbox(rect)
+                    if text and text.strip():
+                        highlights.append(text.strip())
+                annot = annot.next
+        doc.close()
+    except Exception as e:
+        logger.error(f"Failed to extract highlights from PDF: {e}")
+        
+    if not highlights:
+        return ""
+        
+    return "\n".join(f"- {h}" for h in highlights)
+

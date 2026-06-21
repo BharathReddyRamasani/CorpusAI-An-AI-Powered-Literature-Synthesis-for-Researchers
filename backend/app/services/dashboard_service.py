@@ -56,15 +56,20 @@ async def get_user_dashboard(db: AsyncSession, user_id: int) -> dict:
         .order_by(Paper.upload_date.desc())
         .limit(5)
     )
-    recent_papers = [
-        {
+    recent_papers = []
+    for p in recent_papers_result.scalars().all():
+        udate = p.upload_date
+        if hasattr(udate, "isoformat"):
+            udate_str = udate.isoformat()
+        else:
+            udate_str = str(udate) if udate else None
+            
+        recent_papers.append({
             "paper_id": p.paper_id,
             "title": p.title or p.filename,
             "status": p.status,
-            "upload_date": p.upload_date.isoformat() if p.upload_date else None,
-        }
-        for p in recent_papers_result.scalars().all()
-    ]
+            "upload_date": udate_str,
+        })
 
     return {
         "total_papers": total_papers,

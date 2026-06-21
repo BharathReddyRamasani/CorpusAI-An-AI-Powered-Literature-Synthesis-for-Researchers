@@ -12,7 +12,7 @@ from app.models.advanced import ResearchInsight, Visualization
 from app.models.paper import Paper
 from app.schemas.research import InsightResponse, VisualizationResponse
 from app.utils.exceptions import NotFoundException, ServiceException
-from app.utils.gemini import call_gemini_api_with_rotation
+from app.utils.groq_client import call_groq_api_with_rotation
 
 logger = logging.getLogger("app")
 
@@ -20,7 +20,7 @@ logger = logging.getLogger("app")
 async def get_insights(db: AsyncSession, paper_id: str, user_id: int) -> InsightResponse:
     # Check if already generated
     result = await db.execute(select(ResearchInsight).where(ResearchInsight.paper_id == paper_id))
-    existing = result.scalar_one_or_none()
+    existing = result.scalars().first()
     if existing:
         return InsightResponse(
             contributions=json.loads(existing.contributions or "[]"),
@@ -55,7 +55,7 @@ Abstract: {paper.abstract}
 Full Text (partial): {paper.full_text[:15000] if paper.full_text else ""}
 """
 
-    response_text = await call_gemini_api_with_rotation(prompt, system_prompt)
+    response_text = await call_groq_api_with_rotation(prompt, system_prompt)
     try:
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
@@ -79,7 +79,7 @@ Full Text (partial): {paper.full_text[:15000] if paper.full_text else ""}
 async def get_visualizations(db: AsyncSession, paper_id: str, user_id: int) -> VisualizationResponse:
     # Check if already generated
     result = await db.execute(select(Visualization).where(Visualization.paper_id == paper_id))
-    existing = result.scalar_one_or_none()
+    existing = result.scalars().first()
     if existing:
         charts_data = json.loads(existing.charts_data)
         return VisualizationResponse(charts=charts_data)
@@ -112,7 +112,7 @@ Abstract: {paper.abstract}
 Results Section: {paper.full_text[:15000] if paper.full_text else ""}
 """
 
-    response_text = await call_gemini_api_with_rotation(prompt, system_prompt)
+    response_text = await call_groq_api_with_rotation(prompt, system_prompt)
     try:
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)

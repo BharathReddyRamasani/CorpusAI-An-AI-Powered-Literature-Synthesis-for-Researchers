@@ -18,5 +18,6 @@ Instructions:
 - If the answer is not found in the context, respond exactly with: "Information not found in paper."
 - Be concise, precise, and use academic language.
 - If relevant, mention which section of the paper the information comes from.
+- When explaining complex concepts, architectures, workflows, or comparisons, you MUST use Mermaid diagram syntax inside markdown code blocks labeled `mermaid` to provide an interactive diagram.
 
 Answer:"""

@@ -1,89 +1,51 @@
-import React, { ButtonHTMLAttributes, forwardRef, useState } from 'react'
-import { Spinner } from './Spinner'
+import React, { ButtonHTMLAttributes, forwardRef } from 'react';
+import { cn } from '../../lib/cn';
+import { Loader2 } from 'lucide-react';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
+  size?: 'sm' | 'md' | 'lg' | 'icon';
   isLoading?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, disabled, children, ...props }, ref) => {
     
-    const [isHovered, setIsHovered] = useState(false)
-    const [isActive, setIsActive] = useState(false)
-
-    const baseStyles: React.CSSProperties = {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 'var(--radius-md)',
-      fontWeight: 500,
-      letterSpacing: '0.01em',
-      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-      cursor: disabled || isLoading ? 'not-allowed' : 'pointer',
-      opacity: disabled || isLoading ? 0.6 : 1,
-      transform: isActive && !disabled && !isLoading ? 'scale(0.97)' : 'scale(1)',
-      border: 'none',
-      outline: 'none',
-    }
-
+    const baseStyles = "relative inline-flex items-center justify-center font-medium transition-all duration-200 active:scale-[0.98] outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100 rounded-[16px]";
+    
     const sizeStyles = {
-      sm: { padding: '0.375rem 0.75rem', fontSize: '0.875rem' },
-      md: { padding: '0.5rem 1.25rem', fontSize: '0.9375rem' },
-      lg: { padding: '0.75rem 1.5rem', fontSize: '1rem' },
-    }
+      sm: "px-3 py-1.5 text-sm",
+      md: "px-5 py-2.5 text-sm",
+      lg: "px-6 py-3 text-base",
+      icon: "p-2 aspect-square flex items-center justify-center"
+    };
 
     const variantStyles = {
-      primary: {
-        background: isHovered && !disabled ? 'var(--accent-primary-hover)' : 'var(--accent-primary)',
-        color: '#fff',
-        boxShadow: isHovered && !disabled ? '0 0 20px rgba(99,102,241,0.6), inset 0 1px 0 rgba(255,255,255,0.2)' : '0 4px 14px 0 rgba(99, 102, 241, 0.39), inset 0 1px 0 rgba(255,255,255,0.1)',
-        border: '1px solid rgba(255,255,255,0.1)'
-      },
-      secondary: {
-        background: isHovered && !disabled ? 'rgba(255, 255, 255, 0.1)' : 'var(--bg-surface-hover)',
-        color: 'var(--text-primary)',
-        border: '1px solid var(--border-subtle)',
-        boxShadow: isHovered && !disabled ? '0 0 15px rgba(255,255,255,0.05)' : 'none'
-      },
-      danger: {
-        background: isHovered && !disabled ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.1)',
-        color: 'var(--color-error)',
-        border: '1px solid rgba(239, 68, 68, 0.4)',
-        boxShadow: isHovered && !disabled ? '0 0 15px rgba(239, 68, 68, 0.3)' : 'none'
-      },
-      ghost: {
-        background: isHovered && !disabled ? 'var(--bg-surface-hover)' : 'transparent',
-        color: 'var(--text-primary)',
-      }
-    }
-
-    const combinedStyles = {
-      ...baseStyles,
-      ...sizeStyles[size],
-      ...variantStyles[variant],
-      ...props.style,
-      transform: isActive && !disabled && !isLoading ? 'scale(0.95)' : isHovered && !disabled && !isLoading ? 'scale(1.02)' : 'scale(1)',
-      transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)'
-    }
+      primary: "bg-[var(--color-primary)] text-white hover:opacity-90 shadow-[0_4px_14px_0_color-mix(in_srgb,var(--color-primary)_40%,transparent)]",
+      secondary: "bg-[var(--color-secondary)] text-white hover:opacity-90 shadow-[0_4px_14px_0_color-mix(in_srgb,var(--color-secondary)_40%,transparent)]",
+      ghost: "bg-transparent text-[var(--color-text-primary)] hover:bg-[color-mix(in_srgb,var(--color-text-primary)_10%,transparent)]",
+      outline: "bg-transparent border border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[color-mix(in_srgb,var(--color-text-primary)_5%,transparent)]",
+      danger: "bg-red-500 text-white hover:opacity-90 shadow-[0_4px_14px_0_rgba(239,68,68,0.4)]"
+    };
 
     return (
       <button
         ref={ref}
-        className={className}
-        style={combinedStyles}
+        className={cn(baseStyles, sizeStyles[size], variantStyles[variant], className)}
         disabled={disabled || isLoading}
-        onMouseEnter={(e) => { setIsHovered(true); props.onMouseEnter?.(e) }}
-        onMouseLeave={(e) => { setIsHovered(false); setIsActive(false); props.onMouseLeave?.(e) }}
-        onMouseDown={(e) => { setIsActive(true); props.onMouseDown?.(e) }}
-        onMouseUp={(e) => { setIsActive(false); props.onMouseUp?.(e) }}
         {...props}
       >
-        {isLoading && <Spinner size="sm" className="mr-2" style={{ marginRight: '8px', borderTopColor: variant === 'primary' ? '#fff' : 'var(--accent-primary)' }} />}
-        {children}
+        <span className={cn("inline-flex items-center justify-center gap-2 transition-opacity", isLoading ? "opacity-0" : "opacity-100")}>
+          {children}
+        </span>
+        {isLoading && (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="w-5 h-5 animate-spin" />
+          </span>
+        )}
       </button>
-    )
+    );
   }
-)
-Button.displayName = 'Button'
+);
+
+Button.displayName = 'Button';

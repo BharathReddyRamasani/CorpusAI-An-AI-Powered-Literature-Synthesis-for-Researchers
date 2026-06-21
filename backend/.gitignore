@@ -45,3 +45,6 @@ htmlcov/
 # Distribution
 *.tar.gz
 *.whl
+
+# Data directories (prevents uvicorn --reload from restarting on DB/ChromaDB writes)
+.data/

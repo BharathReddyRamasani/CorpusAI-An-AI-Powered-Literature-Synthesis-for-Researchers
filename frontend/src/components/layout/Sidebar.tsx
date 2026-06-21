@@ -1,141 +1,111 @@
-import React from 'react'
-import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FileText, User as UserIcon, LogOut, PanelLeftClose, PanelLeft, Globe } from 'lucide-react'
-import { useAuthStore } from '../../store/authStore'
-import { useUIStore } from '../../store/uiStore'
-import { motion } from 'framer-motion'
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { LayoutDashboard, FileText, Globe, Search, User as UserIcon, X, Upload, Settings } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import { useUIStore } from '../../store/uiStore';
+import { cn } from '../../lib/cn';
+import { Logo } from '../ui/Logo';
+import { Button } from '../ui/Button';
+import { Avatar } from '../ui/Avatar';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useLanguage } from '../../context/LanguageContext';
 
 export const Sidebar = () => {
-  const { user, logout } = useAuthStore()
-  const { sidebarOpen, toggleSidebar } = useUIStore()
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
+  const { user } = useAuthStore();
+  const { sidebarOpen, toggleSidebar } = useUIStore();
+  const location = useLocation();
+  const { t } = useLanguage();
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { path: '/papers', label: 'My Papers', icon: <FileText size={20} /> },
-    { path: '/global-research', label: 'Global Research', icon: <Globe size={20} /> },
-    { path: '/profile', label: 'Profile', icon: <UserIcon size={20} /> },
-  ]
+    { path: '/dashboard', label: t('nav.dashboard'), icon: <LayoutDashboard size={20} /> },
+    { path: '/papers', label: t('nav.papers'), icon: <FileText size={20} /> },
+    { path: '/global-research', label: t('nav.global'), icon: <Globe size={20} /> },
+    { path: '/arxiv', label: 'ArXiv Search', icon: <Search size={20} /> },
+    { path: '/graph', label: t('nav.graph'), icon: <Search size={20} /> }, // Using Search as generic icon
+    { path: '/settings', label: t('nav.settings'), icon: <Settings size={20} /> },
+  ];
 
-  return (
-    <aside
-      style={{
-        width: sidebarOpen ? '260px' : '80px',
-        background: 'var(--bg-surface)',
-        backdropFilter: 'blur(30px)',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-        zIndex: 40,
-        overflowX: 'hidden',
-        boxShadow: '10px 0 30px rgba(0,0,0,0.2)'
-      }}
-    >
-      <div style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center' }}>
-        {sidebarOpen && (
-          <motion.div 
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-          >
-            <div className="animate-pulse-glow" style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-violet))', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(99,102,241,0.4)' }}>
-              <span style={{ color: '#fff', fontWeight: 700, fontSize: '1.2rem' }}>A</span>
-            </div>
-            <span className="text-glow" style={{ fontWeight: 700, fontSize: '1.1rem', whiteSpace: 'nowrap', letterSpacing: '-0.02em' }}>AI Assistant</span>
-          </motion.div>
-        )}
-        <button onClick={toggleSidebar} style={{ color: 'var(--text-secondary)', transition: 'color 0.2s' }} className="hover:text-white">
-          {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
+  const sidebarContent = (
+    <div className="flex flex-col h-full w-[260px] bg-[var(--color-surface)] border-r border-[var(--color-border)] pt-6 pb-4 px-4 overflow-y-auto">
+      <div className="flex items-center justify-between mb-8 pl-2">
+        <Logo size="sm" />
+        {/* Mobile close button */}
+        <button className="md:hidden p-2 text-[var(--color-text-secondary)]" onClick={toggleSidebar}>
+          <X size={20} />
         </button>
       </div>
 
-      <nav style={{ flex: 1, padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', position: 'relative' }}>
+      <div className="mb-6">
+        <div className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white py-2.5 px-4 rounded-[14px] font-display font-bold shadow-md shadow-[var(--color-primary)]/20 text-lg tracking-tight">
+          Corpus AI
+        </div>
+      </div>
+
+      <nav className="flex-1 space-y-1.5">
         {navItems.map((item) => {
-          const isActive = location.pathname.startsWith(item.path)
-          
+          const isActive = location.pathname.startsWith(item.path);
           return (
-            <NavLink 
+            <NavLink
               key={item.path}
-              to={item.path} 
-              className={`nav-link ${isActive ? 'active' : ''}`}
-              style={{ position: 'relative', overflow: 'hidden' }}
-            >
-              {isActive && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'linear-gradient(90deg, rgba(99,102,241,0.15) 0%, transparent 100%)',
-                    borderLeft: '3px solid var(--accent-primary)',
-                    borderRadius: 'var(--radius-md)',
-                    zIndex: -1
-                  }}
-                  transition={{ duration: 0.2 }}
-                />
+              to={item.path}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-[16px] font-medium transition-colors duration-200 tracking-tight",
+                isActive 
+                  ? "bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] text-[var(--color-primary)]" 
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-background-secondary)] hover:text-[var(--color-text-primary)]"
               )}
-              <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span style={{ color: isActive ? 'var(--accent-primary)' : 'inherit', transition: 'color 0.3s' }}>
-                  {item.icon}
-                </span>
-                {sidebarOpen && <span>{item.label}</span>}
-              </div>
+            >
+              {item.icon}
+              {item.label}
             </NavLink>
-          )
+          );
         })}
       </nav>
 
-      <div style={{ padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        {sidebarOpen ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ overflow: 'hidden' }}>
-              <p style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', color: 'var(--text-primary)' }}>{user?.name}</p>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{user?.email}</p>
-            </div>
-            <button onClick={handleLogout} style={{ color: 'var(--text-secondary)', padding: '0.5rem', transition: 'color 0.2s', cursor: 'pointer' }} onMouseOver={e => e.currentTarget.style.color = 'var(--color-error)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}>
-              <LogOut size={18} />
-            </button>
+      {/* User Mini-Card */}
+      <div className="mt-auto pt-4 border-t border-[var(--color-border)]">
+        <div className="flex items-center gap-3 p-2 rounded-[16px] hover:bg-[var(--color-background-secondary)] transition-colors cursor-pointer">
+          <Avatar name={user?.name} size="sm" />
+          <div className="flex-1 overflow-hidden">
+            <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">{user?.name}</p>
+            <p className="text-xs text-[var(--color-text-secondary)] truncate">{user?.email}</p>
           </div>
-        ) : (
-          <button onClick={handleLogout} style={{ width: '100%', display: 'flex', justifyContent: 'center', color: 'var(--text-secondary)', transition: 'color 0.2s', cursor: 'pointer' }} onMouseOver={e => e.currentTarget.style.color = 'var(--color-error)'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-secondary)'}>
-            <LogOut size={20} />
-          </button>
-        )}
+        </div>
       </div>
+    </div>
+  );
 
-      <style>{`
-        .nav-link {
-          display: flex;
-          align-items: center;
-          padding: 0.75rem 1rem;
-          color: var(--text-secondary);
-          border-radius: var(--radius-md);
-          transition: all 0.2s;
-          white-space: nowrap;
-          text-decoration: none;
-        }
-        .nav-link:hover {
-          color: var(--text-primary);
-        }
-        .nav-link.active {
-          color: var(--text-primary);
-          font-weight: 600;
-        }
-        .hover\\:text-white:hover {
-          color: white !important;
-        }
-      `}</style>
-    </aside>
-  )
-}
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex h-screen sticky top-0 z-40">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <div className="md:hidden fixed inset-0 z-50 flex">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={toggleSidebar}
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative shadow-xl"
+            >
+              {sidebarContent}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};

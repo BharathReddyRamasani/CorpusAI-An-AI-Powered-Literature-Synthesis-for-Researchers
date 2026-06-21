@@ -1,66 +1,50 @@
-import React, { InputHTMLAttributes, forwardRef, useState } from 'react'
+import React, { InputHTMLAttributes, forwardRef } from 'react';
+import { cn } from '../../lib/cn';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  helper?: string;
   icon?: React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, icon, ...props }, ref) => {
-    const [isFocused, setIsFocused] = useState(false)
-
+  ({ className, label, error, helper, icon, ...props }, ref) => {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', width: '100%' }} className={className}>
+      <div className={cn("flex flex-col gap-1.5 w-full", className)}>
         {label && (
-          <label style={{ 
-            fontSize: '0.875rem', 
-            fontWeight: 500, 
-            color: 'var(--text-secondary)',
-            letterSpacing: '-0.01em'
-          }}>
+          <label className="text-sm font-medium text-[var(--color-text-secondary)] tracking-tight">
             {label}
           </label>
         )}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <div className="relative flex items-center">
           {icon && (
-            <div style={{ position: 'absolute', left: '1rem', color: isFocused ? 'var(--accent-primary)' : 'var(--text-muted)', zIndex: 1, transition: 'color 0.2s' }}>
+            <div className="absolute left-3 text-[var(--color-text-secondary)] peer-focus:text-[var(--color-primary)] transition-colors z-10 pointer-events-none">
               {icon}
             </div>
           )}
           <input
             ref={ref}
-            onFocus={(e) => {
-              setIsFocused(true)
-              props.onFocus?.(e)
-            }}
-            onBlur={(e) => {
-              setIsFocused(false)
-              props.onBlur?.(e)
-            }}
-            style={{
-              padding: '0.75rem 1rem',
-              paddingLeft: icon ? '3rem' : '1rem',
-              background: 'var(--bg-surface-solid)',
-              border: `1px solid ${error ? 'var(--color-error)' : isFocused ? 'var(--border-focus)' : 'var(--border-subtle)'}`,
-              borderRadius: 'var(--radius-md)',
-              color: 'var(--text-primary)',
-              outline: 'none',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              width: '100%',
-              boxShadow: isFocused && !error ? '0 0 0 3px rgba(99, 102, 241, 0.15)' : error && isFocused ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : 'none',
-              ...props.style
-            }}
+            className={cn(
+              "peer w-full px-4 py-2.5 bg-[var(--color-surface)] text-[var(--color-text-primary)]",
+              "border rounded-[16px] outline-none transition-all duration-200",
+              "placeholder-[var(--color-text-secondary)]/50",
+              icon ? "pl-11" : "",
+              error
+                ? "border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-500/20"
+                : "border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/20"
+            )}
             {...props}
           />
         </div>
-        {error && (
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-error)', marginTop: '0.25rem' }}>
-            {error}
+        {(error || helper) && (
+          <span className={cn("text-xs mt-1", error ? "text-red-500" : "text-[var(--color-text-secondary)]")}>
+            {error || helper}
           </span>
         )}
       </div>
-    )
+    );
   }
-)
-Input.displayName = 'Input'
+);
+
+Input.displayName = 'Input';

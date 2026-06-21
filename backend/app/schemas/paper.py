@@ -3,9 +3,9 @@ Schemas — Paper Pydantic Models
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, HttpUrl
 
 
 # ── Paper Response ────────────────────────────────────────────────────────────
@@ -20,6 +20,18 @@ class PaperResponse(BaseModel):
     status: str
     upload_date: datetime
 
+    @field_validator("upload_date", mode="before")
+    @classmethod
+    def parse_sqlite_datetime(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            try:
+                if "." in v:
+                    return datetime.strptime(v, "%Y-%m-%d %H:%M:%S.%f")
+                return datetime.strptime(v, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                pass
+        return v
+
     model_config = {"from_attributes": True}
 
 
@@ -33,6 +45,10 @@ class PaperUploadResponse(BaseModel):
     paper_id: str
     filename: str
     status: str
+
+
+class URLUploadRequest(BaseModel):
+    url: HttpUrl
 
 
 # ── Citation Schemas ──────────────────────────────────────────────────────────
@@ -62,6 +78,18 @@ class SummaryResponse(BaseModel):
     paper_id: str
     summary: str
     created_at: datetime
+
+    @field_validator("created_at", mode="before")
+    @classmethod
+    def parse_sqlite_datetime(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            try:
+                if "." in v:
+                    return datetime.strptime(v, "%Y-%m-%d %H:%M:%S.%f")
+                return datetime.strptime(v, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                pass
+        return v
 
     model_config = {"from_attributes": True}
 

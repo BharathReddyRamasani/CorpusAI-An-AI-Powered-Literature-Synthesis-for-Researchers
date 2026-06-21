@@ -1,173 +1,149 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { motion } from 'framer-motion'
-import { Mail, Lock, KeyRound, ArrowLeft } from 'lucide-react'
-import toast from 'react-hot-toast'
-import { authApi } from '../api/auth'
-import { Input } from '../components/ui/Input'
-import { Button } from '../components/ui/Button'
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { motion } from 'framer-motion';
+import { Mail, Upload, Search, LineChart, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { authApi } from '../api/auth';
+import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/Button';
+import { Logo } from '../components/ui/Logo';
 
-// Step 1 Schema: Request OTP
-const requestSchema = z.object({
+const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address'),
-})
+});
 
-// Step 2 Schema: Reset Password
-const resetSchema = z.object({
-  otp: z.string().length(6, 'OTP must be exactly 6 digits'),
-  new_password: z.string().min(6, 'Password must be at least 6 characters'),
-})
-
-type RequestFormValues = z.infer<typeof requestSchema>
-type ResetFormValues = z.infer<typeof resetSchema>
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 const ForgotPasswordPage = () => {
-  const navigate = useNavigate()
-  const [step, setStep] = useState<1 | 2>(1)
-  const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState('');
 
-  const requestForm = useForm<RequestFormValues>({
-    resolver: zodResolver(requestSchema),
-  })
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ForgotPasswordFormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+  });
 
-  const resetForm = useForm<ResetFormValues>({
-    resolver: zodResolver(resetSchema),
-  })
-
-  const onRequestSubmit = async (data: RequestFormValues) => {
+  const onSubmit = async (data: ForgotPasswordFormValues) => {
     try {
-      setIsLoading(true)
-      await authApi.forgotPassword(data)
-      setEmail(data.email)
-      setStep(2)
-      toast.success('If an account exists, an OTP has been sent to your email.')
+      setIsLoading(true);
+      await authApi.forgotPassword(data.email);
+      setSubmittedEmail(data.email);
+      setIsSubmitted(true);
     } catch (error: any) {
-      console.error(error)
+      console.error(error);
+      // Even if it fails (e.g. user not found), we should probably show success to prevent email enumeration
+      // But we'll just show a generic error toast via interceptor and not advance state
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
-
-  const onResetSubmit = async (data: ResetFormValues) => {
-    try {
-      setIsLoading(true)
-      await authApi.resetPassword({
-        email,
-        otp: data.otp,
-        new_password: data.new_password,
-      })
-      toast.success('Password successfully reset! You can now log in.')
-      navigate('/login')
-    } catch (error: any) {
-      console.error(error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-deep-void)', alignItems: 'center', justifyContent: 'center', padding: '2rem', position: 'relative' }}>
-      
-      {/* Subtle background glow */}
-      <div className="animate-pulse-glow" style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '600px',
-        height: '600px',
-        background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, rgba(0,0,0,0) 70%)',
-        pointerEvents: 'none',
-        zIndex: 0
-      }} />
+    <div className="flex min-h-screen bg-[var(--color-background)]">
+      {/* Left Brand Panel */}
+      <div className="hidden lg:flex flex-col justify-center flex-[1.2] p-16 relative overflow-hidden bg-[var(--color-background-secondary)] border-r border-[var(--color-border)]">
+        
+        {/* Animated Background Blobs */}
+        <div className="bg-blob w-[500px] h-[500px] bg-[var(--color-primary)] top-10 -left-20" />
+        <div className="bg-blob w-[400px] h-[400px] bg-[var(--color-accent)] bottom-10 right-0" style={{ animationDelay: '2s' }} />
 
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.6, cubicBezier: [0.16, 1, 0.3, 1] }}
-        style={{ width: '100%', maxWidth: '440px', zIndex: 1 }}
-      >
-        <div style={{ 
-          background: 'var(--bg-surface)', 
-          backdropFilter: 'blur(30px)',
-          WebkitBackdropFilter: 'blur(30px)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 'var(--radius-xl)',
-          padding: '3rem',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
-        }}>
-          
-          <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.9rem', transition: 'color 0.2s' }}>
-            <ArrowLeft size={16} /> Back to login
-          </Link>
-
-          {step === 1 ? (
-            <>
-              <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', padding: '1rem', background: 'rgba(99,102,241,0.1)', borderRadius: '50%', marginBottom: '1.5rem' }}>
-                  <KeyRound size={32} color="var(--accent-primary)" />
-                </div>
-                <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>Forgot Password</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Enter your email and we'll send you a 6-digit verification code to reset your password.</p>
-              </div>
-
-              <form onSubmit={requestForm.handleSubmit(onRequestSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <Input
-                  label="Email Address"
-                  type="email"
-                  placeholder="you@example.com"
-                  icon={<Mail size={20} />}
-                  {...requestForm.register('email')}
-                  error={requestForm.formState.errors.email?.message}
-                />
-                <Button type="submit" size="lg" isLoading={isLoading} style={{ width: '100%', background: 'var(--accent-primary)', color: 'white' }}>
-                  Send Verification Code
-                </Button>
-              </form>
-            </>
-          ) : (
-            <>
-              <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', padding: '1rem', background: 'rgba(16,185,129,0.1)', borderRadius: '50%', marginBottom: '1.5rem' }}>
-                  <Lock size={32} color="var(--color-success)" />
-                </div>
-                <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>Reset Password</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>Enter the 6-digit code sent to <br/><strong style={{color: 'var(--text-primary)'}}>{email}</strong></p>
-              </div>
-
-              <form onSubmit={resetForm.handleSubmit(onResetSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <Input
-                  label="6-Digit OTP"
-                  type="text"
-                  placeholder="123456"
-                  maxLength={6}
-                  style={{ letterSpacing: '0.5em', textAlign: 'center', fontSize: '1.25rem', fontWeight: 600 }}
-                  {...resetForm.register('otp')}
-                  error={resetForm.formState.errors.otp?.message}
-                />
-                <Input
-                  label="New Password"
-                  type="password"
-                  placeholder="••••••••"
-                  icon={<Lock size={20} />}
-                  {...resetForm.register('new_password')}
-                  error={resetForm.formState.errors.new_password?.message}
-                />
-                <Button type="submit" size="lg" isLoading={isLoading} style={{ width: '100%', background: 'var(--color-success)', color: 'white' }}>
-                  Reset Password
-                </Button>
-              </form>
-            </>
-          )}
-
+        {/* Floating Icon Cluster */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-30">
+          <svg className="absolute w-full h-full" style={{ strokeDasharray: '4 4' }}>
+            <line x1="30%" y1="40%" x2="70%" y2="60%" stroke="var(--color-border)" strokeWidth="2" />
+            <line x1="70%" y1="40%" x2="30%" y2="60%" stroke="var(--color-border)" strokeWidth="2" />
+          </svg>
+          <motion.div animate={{ y: [-10, 10, -10] }} transition={{ duration: 4, repeat: Infinity }} className="absolute top-[30%] left-[30%] p-4 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)]">
+            <Upload size={24} className="text-[var(--color-primary)]" />
+          </motion.div>
+          <motion.div animate={{ y: [10, -10, 10] }} transition={{ duration: 5, repeat: Infinity }} className="absolute top-[30%] right-[30%] p-4 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)]">
+            <Search size={24} className="text-[var(--color-accent)]" />
+          </motion.div>
+          <motion.div animate={{ y: [-10, 10, -10] }} transition={{ duration: 6, repeat: Infinity }} className="absolute bottom-[30%] left-[45%] p-4 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)]">
+            <LineChart size={24} className="text-[var(--color-secondary)]" />
+          </motion.div>
         </div>
-      </motion.div>
-    </div>
-  )
-}
 
-export default ForgotPasswordPage
+        {/* Branding Content */}
+        <div className="relative z-10 max-w-xl">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <Logo size="lg" className="mb-8" />
+            <h1 className="font-display text-5xl font-extrabold tracking-tight text-balance leading-tight mb-6 text-[var(--color-text-primary)]">
+              Securely access <br/><span className="gradient-text">your knowledge</span>
+            </h1>
+            <p className="text-xl text-[var(--color-text-secondary)] leading-relaxed mb-12">
+              Get back to your academic workflow seamlessly and securely.
+            </p>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Right Form Panel */}
+      <div className="flex-1 flex items-center justify-center p-8 relative">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-[440px] z-10"
+        >
+          <div className="card-surface p-10 shadow-xl">
+            {!isSubmitted ? (
+              <>
+                <div className="mb-8">
+                  <div className="lg:hidden flex mb-6">
+                    <Logo size="md" />
+                  </div>
+                  <Link to="/login" className="inline-flex items-center text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors mb-6">
+                    <ArrowLeft size={16} className="mr-2" />
+                    Back to login
+                  </Link>
+                  <h2 className="font-display text-3xl font-bold tracking-tight text-[var(--color-text-primary)] mb-2">Reset password</h2>
+                  <p className="text-[var(--color-text-secondary)]">Enter your email address and we'll send you a link to reset your password.</p>
+                </div>
+
+                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+                  <Input
+                    label="Email"
+                    type="email"
+                    placeholder="you@example.com"
+                    icon={<Mail size={20} />}
+                    {...register('email')}
+                    error={errors.email?.message}
+                  />
+
+                  <Button type="submit" size="lg" isLoading={isLoading} className="w-full mt-2">
+                    Send Reset Link
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-4">
+                <div className="inline-flex p-4 rounded-full bg-green-500/10 mb-6">
+                  <CheckCircle2 size={40} className="text-green-500" />
+                </div>
+                <h2 className="font-display text-2xl font-bold tracking-tight text-[var(--color-text-primary)] mb-4">Check your email</h2>
+                <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed">
+                  We've sent password reset instructions to <strong className="text-[var(--color-text-primary)]">{submittedEmail}</strong>.
+                </p>
+                <Link to="/login">
+                  <Button variant="outline" className="w-full">
+                    Return to Login
+                  </Button>
+                </Link>
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+};
+
+export default ForgotPasswordPage;

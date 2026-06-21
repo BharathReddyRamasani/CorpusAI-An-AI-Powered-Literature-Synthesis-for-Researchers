@@ -25,14 +25,14 @@ def send_otp_email(to_email: str, otp: str):
         msg = MIMEMultipart()
         msg["From"] = smtp_email
         msg["To"] = to_email
-        msg["Subject"] = "Your AI Research Assistant Verification Code"
+        msg["Subject"] = "Your Corpus AI Verification Code"
 
         # HTML body
         html = f"""
         <html>
           <body style="font-family: Arial, sans-serif; background-color: #f4f4f5; padding: 20px;">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-              <h2 style="color: #4f46e5; text-align: center;">AI Research Assistant</h2>
+              <h2 style="color: #4f46e5; text-align: center;">Corpus AI</h2>
               <p style="font-size: 16px; color: #374151;">Hello,</p>
               <p style="font-size: 16px; color: #374151;">Please use the following verification code to complete your registration:</p>
               <div style="text-align: center; margin: 30px 0;">
@@ -73,7 +73,7 @@ def send_otp_email(to_email: str, otp: str):
             
             payload = {
                 "sender": {
-                    "name": "AI Research Assistant",
+                    "name": "Corpus AI",
                     "email": "ramasanibharathreddy2004@gmail.com"
                 },
                 "to": [
@@ -81,7 +81,7 @@ def send_otp_email(to_email: str, otp: str):
                         "email": to_email
                     }
                 ],
-                "subject": "Your AI Research Assistant Verification Code",
+                "subject": "Your Corpus AI Verification Code",
                 "htmlContent": html
             }
             

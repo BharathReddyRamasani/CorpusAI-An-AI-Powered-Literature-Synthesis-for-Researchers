@@ -24,7 +24,7 @@ from app.prompts.report import REPORT_SYSTEM_PROMPT, REPORT_USER_PROMPT
 from app.utils.exceptions import BadRequestException, NotFoundException, ServiceException
 from app.utils.helpers import get_report_path
 
-from app.utils.gemini import call_gemini_api_with_rotation
+from app.utils.groq_client import call_groq_api_with_rotation
 
 logger = logging.getLogger("app")
 
@@ -48,12 +48,12 @@ async def _generate_report_content(db: AsyncSession, paper_id: str) -> str:
     summary_result = await db.execute(
         select(Summary).where(Summary.paper_id == paper_id)
     )
-    summary_obj = summary_result.scalar_one_or_none()
+    summary_obj = summary_result.scalars().first()
     summary_text = summary_obj.summary if summary_obj else "No summary available."
 
-    # Get citations
+    # Get citations (limit to 10 for Groq free tier limit)
     citations_result = await db.execute(
-        select(Citation).where(Citation.paper_id == paper_id).limit(50)
+        select(Citation).where(Citation.paper_id == paper_id).limit(10)
     )
     citations = list(citations_result.scalars().all())
     citations_text = "\n".join(
@@ -61,32 +61,32 @@ async def _generate_report_content(db: AsyncSession, paper_id: str) -> str:
         for c in citations
     ) or "No citations extracted."
 
-    # Get QA insights
+    # Get QA insights (limit to 5)
     qa_result = await db.execute(
-        select(ChatHistory).where(ChatHistory.paper_id == paper_id).limit(10)
+        select(ChatHistory).where(ChatHistory.paper_id == paper_id).limit(5)
     )
     qa_history = list(qa_result.scalars().all())
     qa_text = "\n".join(
         f"Q: {qa.question}\nA: {qa.answer}" for qa in qa_history
     ) or "No Q&A interactions recorded."
 
-    # Build prompt
+    # Build prompt (truncate fields for 8000 TPM limit)
     prompt = REPORT_USER_PROMPT.format(
-        title=paper.title or paper.filename,
-        authors=paper.authors or "Unknown",
-        abstract=paper.abstract or "Not available",
-        summary=summary_text,
+        title=(paper.title or paper.filename)[:500],
+        authors=(paper.authors or "Unknown")[:500],
+        abstract=(paper.abstract or "Not available")[:3000],
+        summary=summary_text[:10000],
         citation_count=len(citations),
-        citations=citations_text,
-        qa_insights=qa_text,
+        citations=citations_text[:4000],
+        qa_insights=qa_text[:4000],
     )
 
-    logger.info(f"Generating report content via Gemini for paper_id={paper_id}")
+    logger.info(f"Generating report content via Groq for paper_id={paper_id}")
 
     try:
-        return await call_gemini_api_with_rotation(prompt, REPORT_SYSTEM_PROMPT)
+        return await call_groq_api_with_rotation(prompt, REPORT_SYSTEM_PROMPT)
     except Exception as e:
-        logger.error(f"Gemini report generation failed: {e}", exc_info=True)
+        logger.error(f"Groq report generation failed: {e}", exc_info=True)
         raise ServiceException(f"Report generation failed: {str(e)}")
 
 

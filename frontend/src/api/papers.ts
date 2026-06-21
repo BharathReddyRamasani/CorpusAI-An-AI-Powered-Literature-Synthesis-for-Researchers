@@ -50,7 +50,7 @@ export interface Citation {
 
 export const papersApi = {
   listPapers: async (params?: { page?: number; page_size?: number; search?: string; sort_by?: string; sort_order?: string }): Promise<PapersResponse> => {
-    const response = await api.get('/api/papers', { params })
+    const response = await api.get('/api/papers', { params, timeout: 10000 })
     return response.data
   },
 
@@ -67,6 +67,16 @@ export const papersApi = {
         'Content-Type': 'multipart/form-data',
       },
     })
+    return response.data
+  },
+
+  uploadText: async (title: string, content: string): Promise<UploadResponse> => {
+    const response = await api.post('/api/papers/upload-text', { title, content })
+    return response.data
+  },
+
+  uploadUrl: async (url: string): Promise<UploadResponse> => {
+    const response = await api.post('/api/papers/upload-url', { url })
     return response.data
   },
 

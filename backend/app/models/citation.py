@@ -11,7 +11,7 @@ class Citation(Base):
     __tablename__ = "citations"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    paper_id: str = Column(String(64), ForeignKey("papers.paper_id"), nullable=False, index=True)
+    paper_id: str = Column(String(64), ForeignKey("papers.paper_id", ondelete="CASCADE"), nullable=False, index=True)
     author: str = Column(Text, nullable=True)
     year: str = Column(String(10), nullable=True)
     title: str = Column(Text, nullable=True)

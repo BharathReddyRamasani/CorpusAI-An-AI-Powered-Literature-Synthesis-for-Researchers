@@ -1,27 +1,28 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { motion } from 'framer-motion'
-import { BrainCircuit, Mail, Lock } from 'lucide-react'
-import toast from 'react-hot-toast'
-import { authApi } from '../api/auth'
-import { useAuthStore } from '../store/authStore'
-import { Input } from '../components/ui/Input'
-import { Button } from '../components/ui/Button'
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { motion } from 'framer-motion';
+import { BrainCircuit, Mail, Lock, Upload, Search, LineChart, FileText } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { authApi } from '../api/auth';
+import { useAuthStore } from '../store/authStore';
+import { Input } from '../components/ui/Input';
+import { Button } from '../components/ui/Button';
+import { Logo } from '../components/ui/Logo';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
-})
+});
 
-type LoginFormValues = z.infer<typeof loginSchema>
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginPage = () => {
-  const navigate = useNavigate()
-  const { setCredentials } = useAuthStore()
-  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate();
+  const setCredentials = useAuthStore(s => s.setCredentials);
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     register,
@@ -29,145 +30,80 @@ const LoginPage = () => {
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-  })
+  });
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      setIsLoading(true)
-      const res = await authApi.login(data)
-      setCredentials(res.user, res.token.access_token)
-      toast.success('Logged in successfully!')
-      navigate('/dashboard')
+      setIsLoading(true);
+      const res = await authApi.login(data);
+      setCredentials(res.user, res.token.access_token);
+      toast.success('Logged in successfully!');
+      navigate('/dashboard');
     } catch (error: any) {
-      // Error toast is handled by axios interceptor, but we can catch specific ones if needed
-      console.error(error)
+      console.error(error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-deep-void)' }}>
+    <div className="flex min-h-screen bg-[var(--color-background)]">
       {/* Left Brand Panel */}
-      <div 
-        className="auth-brand-panel mesh-bg"
-        style={{ 
-          flex: 1.2, 
-          display: 'flex',
-          flexDirection: 'column', 
-          justifyContent: 'center', 
-          padding: '4rem',
-          position: 'relative',
-          overflow: 'hidden',
-          borderRight: '1px solid var(--border-subtle)'
-        }}
-      >
-        {/* Animated Background Elements */}
-        <motion.div 
-          className="animate-pulse-glow"
-          style={{
-            position: 'absolute',
-            top: '20%',
-            left: '10%',
-            width: '400px',
-            height: '400px',
-            background: 'var(--accent-glow)',
-            filter: 'blur(100px)',
-            borderRadius: '50%',
-            zIndex: 0
-          }}
-        />
+      <div className="hidden lg:flex flex-col justify-center flex-[1.2] p-16 relative overflow-hidden bg-[var(--color-background-secondary)] border-r border-[var(--color-border)]">
+        
+        {/* Animated Background Blobs */}
+        <div className="bg-blob w-[500px] h-[500px] bg-[var(--color-primary)] top-10 -left-20" />
+        <div className="bg-blob w-[400px] h-[400px] bg-[var(--color-accent)] bottom-10 right-0" style={{ animationDelay: '2s' }} />
 
-        {/* 3D Floating Elements */}
-        <motion.div 
-          className="animate-float"
-          style={{ position: 'absolute', top: '15%', right: '15%', background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', zIndex: 0 }}
-        >
-          <div style={{ width: 40, height: '4px', background: 'var(--accent-primary)', borderRadius: 2, marginBottom: 8 }} />
-          <div style={{ width: 60, height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: 2, marginBottom: 8 }} />
-          <div style={{ width: 30, height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: 2 }} />
-        </motion.div>
-
-        <motion.div 
-          className="animate-float-delayed"
-          style={{ position: 'absolute', bottom: '25%', left: '10%', width: '100px', height: '100px', background: 'linear-gradient(135deg, #a855f7, #6366f1)', borderRadius: '50%', filter: 'blur(40px)', opacity: 0.5, zIndex: 0 }}
-        />
+        {/* Floating Icon Cluster */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-30">
+          <svg className="absolute w-full h-full" style={{ strokeDasharray: '4 4' }}>
+            <line x1="30%" y1="40%" x2="70%" y2="60%" stroke="var(--color-border)" strokeWidth="2" />
+            <line x1="70%" y1="40%" x2="30%" y2="60%" stroke="var(--color-border)" strokeWidth="2" />
+          </svg>
+          <motion.div animate={{ y: [-10, 10, -10] }} transition={{ duration: 4, repeat: Infinity }} className="absolute top-[30%] left-[30%] p-4 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)]">
+            <Upload size={24} className="text-[var(--color-primary)]" />
+          </motion.div>
+          <motion.div animate={{ y: [10, -10, 10] }} transition={{ duration: 5, repeat: Infinity }} className="absolute top-[30%] right-[30%] p-4 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)]">
+            <Search size={24} className="text-[var(--color-accent)]" />
+          </motion.div>
+          <motion.div animate={{ y: [-10, 10, -10] }} transition={{ duration: 6, repeat: Infinity }} className="absolute bottom-[30%] left-[45%] p-4 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)]">
+            <LineChart size={24} className="text-[var(--color-secondary)]" />
+          </motion.div>
+        </div>
 
         {/* Branding Content */}
-        <div style={{ position: 'relative', zIndex: 10, maxWidth: '600px' }}>
+        <div className="relative z-10 max-w-xl">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <div style={{ display: 'inline-flex', padding: '1rem', background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2))', borderRadius: '1rem', marginBottom: '2rem', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <BrainCircuit size={48} color="var(--accent-primary)" />
-            </div>
-            <h1 className="text-glow" style={{ fontSize: '3.5rem', fontWeight: 800, lineHeight: 1.1, marginBottom: '1.5rem', letterSpacing: '-0.02em' }}>
-              Advanced AI <br/>
-              <span style={{ color: 'var(--accent-violet)' }}>Research Assistant</span>
+            <Logo size="lg" className="mb-8" />
+            <h1 className="font-display text-5xl font-extrabold tracking-tight text-balance leading-tight mb-6 text-[var(--color-text-primary)]">
+              Your intelligent <span className="gradient-text">research partner</span>
             </h1>
-            <p style={{ fontSize: '1.25rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '3rem' }}>
-              Elevate your academic workflow with AI-powered document analysis, instant Q&A, and interactive study tools designed for modern researchers.
+            <p className="text-xl text-[var(--color-text-secondary)] leading-relaxed mb-12">
+              Elevate your academic workflow. Securely store your papers, generate AI insights, and access a custom-built knowledge base anywhere.
             </p>
-          </motion.div>
-
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4, duration: 0.6 }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <span style={{ color: 'var(--accent-primary)', fontSize: '1.25rem', fontWeight: 700 }}>01</span>
-              </div>
-              <div>
-                <h4 style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.25rem' }}>Upload & Parse</h4>
-                <p style={{ color: 'var(--text-muted)' }}>Process unlimited PDF research papers securely.</p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <span style={{ color: 'var(--accent-violet)', fontSize: '1.25rem', fontWeight: 700 }}>02</span>
-              </div>
-              <div>
-                <h4 style={{ fontWeight: 600, fontSize: '1.1rem', marginBottom: '0.25rem' }}>Cross-Document RAG</h4>
-                <p style={{ color: 'var(--text-muted)' }}>Ask questions and compare methodologies across papers.</p>
-              </div>
-            </div>
           </motion.div>
         </div>
       </div>
 
       {/* Right Form Panel */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', position: 'relative' }}>
-        
-        {/* Subtle background glow behind the form */}
-        <div className="animate-pulse-glow" style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '600px',
-          height: '600px',
-          background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, rgba(0,0,0,0) 70%)',
-          pointerEvents: 'none',
-          zIndex: 0
-        }} />
-
+      <div className="flex-1 flex items-center justify-center p-8 relative">
         <motion.div 
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.6, cubicBezier: [0.16, 1, 0.3, 1] }}
-          style={{ width: '100%', maxWidth: '440px', zIndex: 1 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-[440px] z-10"
         >
-          <div style={{ 
-            background: 'var(--bg-surface)', 
-            backdropFilter: 'blur(30px)',
-            WebkitBackdropFilter: 'blur(30px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 'var(--radius-xl)',
-            padding: '3rem',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
-          }}>
-            <div style={{ marginBottom: '2.5rem', textAlign: 'center' }}>
-              <h2 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>Welcome back</h2>
-              <p style={{ color: 'var(--text-secondary)' }}>Enter your credentials to access your account</p>
+          <div className="card-surface p-10 shadow-xl">
+            <div className="text-center mb-8">
+              <div className="lg:hidden flex justify-center mb-6">
+                <Logo size="md" />
+              </div>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-[var(--color-text-primary)] mb-2">Welcome back</h2>
+              <p className="text-[var(--color-text-secondary)]">Enter your credentials to access your account</p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
               <Input
                 label="Email"
                 type="email"
@@ -177,7 +113,7 @@ const LoginPage = () => {
                 error={errors.email?.message}
               />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="flex flex-col gap-2">
                 <Input
                   label="Password"
                   type="password"
@@ -186,27 +122,29 @@ const LoginPage = () => {
                   {...register('password')}
                   error={errors.password?.message}
                 />
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Link to="/forgot-password" style={{ fontSize: '0.9rem', color: 'var(--accent-primary)', fontWeight: 500 }}>
+                <div className="flex justify-end">
+                  <Link to="/forgot-password" className="text-sm font-medium text-[var(--color-primary)] hover:text-[var(--color-secondary)] transition-colors">
                     Forgot password?
                   </Link>
                 </div>
               </div>
 
-              <Button type="submit" size="lg" isLoading={isLoading} style={{ marginTop: '0.5rem', width: '100%', background: 'var(--accent-primary)', color: 'white' }}>
+              <Button type="submit" size="lg" isLoading={isLoading} className="w-full mt-2">
                 Sign In
               </Button>
             </form>
 
-            <p style={{ marginTop: '2.5rem', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+            <p className="mt-8 text-center text-sm text-[var(--color-text-secondary)]">
               Don't have an account?{' '}
-              <Link to="/register" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Sign up</Link>
+              <Link to="/register" className="font-semibold text-[var(--color-text-primary)] hover:text-[var(--color-primary)] transition-colors">
+                Sign up
+              </Link>
             </p>
           </div>
         </motion.div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default LoginPage
+export default LoginPage;

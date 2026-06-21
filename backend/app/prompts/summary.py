@@ -12,16 +12,16 @@ Research Paper Text:
 
 Provide a structured summary with the following four sections. Use clear academic language and be concise.
 
-Format your response EXACTLY as follows:
+Format your response in MARKDOWN with EXACTLY the following Level-3 Headers (###):
 
-## Objective
+### Objective
 [What is the main goal, problem statement, or research question of this paper?]
 
-## Methodology
+### Methodology
 [What methods, techniques, datasets, or approaches were used?]
 
-## Findings
+### Findings
 [What are the key results, discoveries, or contributions?]
 
-## Conclusion
+### Conclusion
 [What conclusions were drawn? What is the significance and potential impact?]"""

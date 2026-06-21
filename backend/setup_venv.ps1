@@ -48,7 +48,7 @@ if (-not (Test-Path ".env")) {
     Copy-Item ".env.example" ".env"
     Write-Host ""
     Write-Host "  .env file created from .env.example" -ForegroundColor Green
-    Write-Host "  IMPORTANT: Edit .env and add your GEMINI_API_KEY!" -ForegroundColor Red
+    Write-Host "  IMPORTANT: Edit .env and add your GROQ_API_KEY!" -ForegroundColor Red
 }
 
 Write-Host ""
@@ -57,7 +57,7 @@ Write-Host "  Setup Complete!" -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor White
-Write-Host "  1. Edit .env and set your GEMINI_API_KEY" -ForegroundColor White
+Write-Host "  1. Edit .env and set your GROQ_API_KEY" -ForegroundColor White
 Write-Host "  2. Activate venv: .\venv\Scripts\Activate.ps1" -ForegroundColor White
 Write-Host "  3. Start server: uvicorn app.main:app --reload" -ForegroundColor White
 Write-Host "  4. Open Swagger: http://localhost:8000/docs" -ForegroundColor White

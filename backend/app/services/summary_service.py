@@ -1,54 +1,40 @@
 """
-Services — Summary Service
-Retrieve paper text → build prompt → call Gemini → store summary.
+Services — Summary Service (Thin Wrapper → Supervisor)
+Delegates to the Summary Agent via the Supervisor router.
 """
 
-import asyncio
 import logging
-from typing import Optional
 
-import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.models.paper import Paper
 from app.models.summary import Summary
-from app.prompts.summary import SUMMARY_SYSTEM_PROMPT, SUMMARY_USER_PROMPT
-from app.utils.exceptions import BadRequestException, NotFoundException, ServiceException
+from app.utils.exceptions import BadRequestException, NotFoundException
 
 logger = logging.getLogger("app")
-
-from app.utils.gemini import call_gemini_api_with_rotation
 
 
 async def generate_summary(db: AsyncSession, paper_id: str) -> Summary:
     """
-    Generate a structured summary for a paper using Gemini.
+    Generate a structured summary for a paper using the Summary Agent.
 
     Workflow:
-    1. Retrieve paper text from SQLite
-    2. Build prompt
-    3. Call Gemini
-    4. Store result
-
-    Args:
-        db: Async database session.
-        paper_id: Target paper ID.
-
-    Returns:
-        Summary ORM object.
+    1. Check if summary already cached in DB.
+    2. Validate paper exists and is ready.
+    3. Dispatch to Summary Agent via Supervisor.
+    4. Store and return the result.
     """
-    # Check if summary already exists
+    # Return cached summary if already exists
     existing = await db.execute(
         select(Summary).where(Summary.paper_id == paper_id)
     )
-    existing_summary = existing.scalar_one_or_none()
+    existing_summary = existing.scalars().first()
     if existing_summary:
-        logger.info(f"Returning cached summary for paper_id={paper_id}")
+        logger.info(f"[Summary Service] Returning cached summary for paper_id={paper_id}")
         return existing_summary
 
-    # Get paper
+    # Validate paper
     paper_result = await db.execute(
         select(Paper).where(Paper.paper_id == paper_id)
     )
@@ -62,25 +48,15 @@ async def generate_summary(db: AsyncSession, paper_id: str) -> Summary:
             "Please wait for processing to complete."
         )
 
-    if not paper.full_text or len(paper.full_text.strip()) < 100:
-        raise BadRequestException("Paper has insufficient text for summarization.")
+    logger.info(f"[Summary Service] Dispatching to Summary Agent: paper_id={paper_id}")
 
-    # Build prompt (Use 60,000 characters safely for Gemini's massive context)
-    paper_text = paper.full_text[:60000]
-    prompt = SUMMARY_USER_PROMPT.format(paper_text=paper_text)
-
-    logger.info(f"Generating summary for paper_id={paper_id} via Gemini...")
-
-    try:
-        summary_text = await call_gemini_api_with_rotation(prompt, SUMMARY_SYSTEM_PROMPT)
-    except Exception as e:
-        logger.error(f"Gemini summary generation failed: {e}", exc_info=True)
-        raise ServiceException(f"Summary generation failed: {str(e)}")
+    from app.services.agents.supervisor import dispatch
+    summary_text = await dispatch("summary", paper_id=paper_id, db=db)
 
     # Store summary
     summary = Summary(paper_id=paper_id, summary=summary_text)
     db.add(summary)
     await db.flush()
     await db.refresh(summary)
-    logger.info(f"Summary stored for paper_id={paper_id}, id={summary.id}")
+    logger.info(f"[Summary Service] Summary stored for paper_id={paper_id}")
     return summary

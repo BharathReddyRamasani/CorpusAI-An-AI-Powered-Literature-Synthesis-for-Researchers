@@ -5,6 +5,7 @@ Repository pattern over SQLAlchemy async sessions.
 """
 
 import asyncio
+import concurrent.futures
 import logging
 import math
 from pathlib import Path
@@ -25,6 +26,13 @@ from app.utils.exceptions import NotFoundException, ServiceException
 from app.utils.helpers import generate_paper_id, get_upload_path, sanitize_filename
 
 logger = logging.getLogger("app")
+
+# PERF: Dedicated thread pool for CPU-bound embedding work
+# Keeps embedding from competing with LLM calls or event loop I/O
+_EMBED_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=2,
+    thread_name_prefix="embed_worker"
+)
 
 
 # ── Create Paper Record ───────────────────────────────────────────────────────
@@ -103,11 +111,12 @@ async def list_papers(
     Returns:
         (papers_list, total_count)
     """
-    query = select(Paper).where(Paper.user_id == user_id)
+    from sqlalchemy.orm import defer
 
-    # Search filter
+    # Base conditions
+    base_where = [Paper.user_id == user_id]
     if search:
-        query = query.where(
+        base_where.append(
             or_(
                 Paper.title.ilike(f"%{search}%"),
                 Paper.filename.ilike(f"%{search}%"),
@@ -116,11 +125,13 @@ async def list_papers(
             )
         )
 
-    # Count total
-    count_result = await db.execute(
-        select(func.count()).select_from(query.subquery())
-    )
+    # Count total (optimized, without pulling the entire subquery)
+    count_query = select(func.count(Paper.paper_id)).where(*base_where)
+    count_result = await db.execute(count_query)
     total = count_result.scalar_one()
+
+    # Query papers (deferring full_text prevents huge memory loading and latency)
+    query = select(Paper).options(defer(Paper.full_text)).where(*base_where)
 
     # Sort
     sort_col = getattr(Paper, sort_by, Paper.upload_date)
@@ -160,9 +171,18 @@ async def process_paper_pipeline(db: AsyncSession, paper_id: str) -> None:
     await db.flush()
 
     try:
-        # Step 1 & 2: PDF Extraction + Metadata
-        logger.info(f"[Pipeline] Step 1/5: Extracting PDF")
-        sections = extract_pdf(paper.file_path)
+        # Step 1 & 2: Document Extraction + Metadata
+        logger.info(f"[Pipeline] Step 1/5: Extracting Document Content")
+        from app.services.document_service import extract_content
+        sections = await asyncio.to_thread(extract_content, paper.file_path, paper.filename)
+
+        # PDF Highlight Extraction
+        from app.services.pdf_service import extract_pdf_highlights
+        highlights = await asyncio.to_thread(extract_pdf_highlights, paper.file_path)
+        if highlights:
+            # We add highlights as a special section to be chunked and embedded
+            sections.other_sections["user_highlights"] = highlights
+            logger.info(f"[Pipeline] Extracted {len(highlights)} characters of highlights.")
 
         paper.title = sections.title or paper.filename
         paper.authors = sections.authors or ""
@@ -172,7 +192,7 @@ async def process_paper_pipeline(db: AsyncSession, paper_id: str) -> None:
 
         # Step 3: Citation Extraction
         logger.info(f"[Pipeline] Step 2/5: Extracting citations")
-        citations = extract_citations(sections.references)
+        citations = await asyncio.to_thread(extract_citations, sections.references)
         for c in citations:
             citation_obj = Citation(
                 paper_id=paper_id,
@@ -188,13 +208,26 @@ async def process_paper_pipeline(db: AsyncSession, paper_id: str) -> None:
         # Step 4: Chunking
         logger.info(f"[Pipeline] Step 3/5: Chunking")
         sections_dict = sections.to_sections_dict()
-        chunks = chunking_service.chunk_sections(sections_dict)
+        chunks = await asyncio.to_thread(chunking_service.chunk_sections, sections_dict)
         
-        # FAST AT ANY COST: Truncate to maximum 30 chunks (approx 6-8 pages)
-        # This completely skips embedding 1000s of chunks which freezes the CPU
-        if len(chunks) > 30:
-            logger.info(f"[Pipeline] Truncating from {len(chunks)} down to 30 chunks for speed.")
-            chunks = chunks[:30]
+        # PERF: Smart chunk cap — keep high-value sections first
+        # 150 chunks ≈ 150k chars ≈ full paper for dense retrieval
+        # Priority: abstract/intro/conclusion always kept, body sampled
+        MAX_CHUNKS = 150
+        if len(chunks) > MAX_CHUNKS:
+            priority_sections = {"abstract", "introduction", "conclusion",
+                                 "methodology", "results", "related_work"}
+            priority = [c for c in chunks
+                        if c.section_name.lower() in priority_sections]
+            rest = [c for c in chunks
+                    if c.section_name.lower() not in priority_sections]
+            # Fill up to MAX_CHUNKS with remaining body chunks
+            kept = priority + rest[: MAX_CHUNKS - len(priority)]
+            logger.info(
+                f"[Pipeline] Smart-capped {len(chunks)} → {len(kept)} chunks "
+                f"({len(priority)} priority + {len(kept)-len(priority)} body)."
+            )
+            chunks = kept
             
         logger.info(f"[Pipeline] {len(chunks)} chunks generated.")
 
@@ -203,10 +236,11 @@ async def process_paper_pipeline(db: AsyncSession, paper_id: str) -> None:
         chunk_texts = [c.text for c in chunks]
 
         if chunk_texts:
-            # Run embedding in thread pool (CPU-bound)
+            # PERF: Run embedding in dedicated embed executor (CPU-bound)
+            # Never blocks LLM workers or the shared default executor
             loop = asyncio.get_event_loop()
             embeddings = await loop.run_in_executor(
-                None, embedding_service.generate_embeddings_batch, chunk_texts
+                _EMBED_EXECUTOR, embedding_service.generate_embeddings_batch, chunk_texts
             )
 
             collection = get_collection()
@@ -239,4 +273,5 @@ async def process_paper_pipeline(db: AsyncSession, paper_id: str) -> None:
         logger.error(f"[Pipeline] FAILED for paper_id={paper_id}: {e}", exc_info=True)
         paper.status = "failed"
         await db.flush()
-        raise
+        # DO NOT raise here. If we raise, the parent background task rolls back the transaction,
+        # which reverts paper.status back to 'pending', causing infinite UI polling!

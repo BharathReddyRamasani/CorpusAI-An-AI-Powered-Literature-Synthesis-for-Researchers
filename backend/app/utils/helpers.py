@@ -25,21 +25,32 @@ def generate_uuid() -> str:
 
 # ── File Validation ───────────────────────────────────────────────────────────
 
-ALLOWED_MIME_TYPES = {"application/pdf"}
-ALLOWED_EXTENSIONS = {".pdf"}
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+    "application/octet-stream", # Fallback for unknown mime types from OS
+    "application/vnd.ms-excel", # Excel CSVs
+}
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".txt", ".md", ".csv", ".docx"
+}
 MAX_FILE_SIZE_BYTES = settings.max_file_size_mb * 1024 * 1024
 
 
-def validate_pdf_file(file: UploadFile) -> None:
-    """Validate uploaded file is a valid PDF within size limits."""
+def validate_supported_file(file: UploadFile) -> None:
+    """Validate uploaded file is a supported type within size limits."""
     ext = Path(file.filename or "").suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise BadRequestException(
-            f"Invalid file type '{ext}'. Only PDF files are allowed."
+            f"Invalid file type '{ext}'. Supported types are: {', '.join(ALLOWED_EXTENSIONS)}"
         )
     if file.content_type and file.content_type not in ALLOWED_MIME_TYPES:
         raise BadRequestException(
-            f"Invalid content type '{file.content_type}'. Only PDF files are allowed."
+            f"Invalid content type '{file.content_type}'."
         )
 
 
@@ -79,5 +90,6 @@ def get_report_path(paper_id: str, fmt: str) -> Path:
 
 def sanitize_filename(filename: str) -> str:
     """Remove unsafe characters from filename."""
-    keepchars = (" ", ".", "_", "-")
-    return "".join(c for c in filename if c.isalnum() or c in keepchars).rstrip()
+    if not filename:
+        return "untitled"
+    return os.path.basename(filename).replace("..", "")

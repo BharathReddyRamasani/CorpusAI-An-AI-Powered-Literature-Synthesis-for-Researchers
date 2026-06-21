@@ -37,6 +37,7 @@ api.interceptors.response.use(
       if (!isAuthRequest) {
         useAuthStore.getState().logout()
         toast.error('Session expired. Please log in again.')
+        window.location.href = '/login'
       }
     }
     

@@ -13,7 +13,7 @@ class Report(Base):
     __tablename__ = "reports"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    paper_id: str = Column(String(64), ForeignKey("papers.paper_id"), nullable=False, index=True)
+    paper_id: str = Column(String(64), ForeignKey("papers.paper_id", ondelete="CASCADE"), nullable=False, index=True)
     report_path: str = Column(Text, nullable=False)
     format: str = Column(String(10), nullable=False)  # 'pdf' or 'docx'
     created_at: datetime = Column(DateTime, server_default=func.now(), nullable=False)

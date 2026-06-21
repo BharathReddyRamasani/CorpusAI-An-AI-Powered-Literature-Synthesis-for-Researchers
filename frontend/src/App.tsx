@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Layout from './components/layout/Layout'
+import { LanguageProvider } from './context/LanguageContext'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
@@ -10,6 +11,11 @@ import PapersPage from './pages/PapersPage'
 import PaperDetailPage from './pages/PaperDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import GlobalResearchPage from './pages/GlobalResearchPage'
+import ArxivPage from './pages/ArxivPage'
+import GraphPage from './pages/GraphPage'
+import LandingPage from './pages/LandingPage'
+import SettingsPage from './pages/SettingsPage'
+import SharedDashboardPage from './pages/SharedDashboardPage'
 import { useAuthStore } from './store/authStore'
 import { Spinner } from './components/ui/Spinner'
 
@@ -63,55 +69,67 @@ const AnimatedRoutes = () => {
   const location = useLocation()
   
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        {/* Public Routes */}
-        <Route 
-          path="/login" 
-          element={
-            <PublicRoute>
-              <PageWrapper><LoginPage /></PageWrapper>
-            </PublicRoute>
-          } 
-        />
-        <Route 
-          path="/register" 
-          element={
-            <PublicRoute>
-              <PageWrapper><RegisterPage /></PageWrapper>
-            </PublicRoute>
-          } 
-        />
-        <Route 
-          path="/forgot-password" 
-          element={
-            <PublicRoute>
-              <PageWrapper><ForgotPasswordPage /></PageWrapper>
-            </PublicRoute>
-          } 
-        />
+    <Routes>
+      {/* Public Routes */}
+      <Route 
+        path="/" 
+        element={
+          <PublicRoute>
+            <PageWrapper><LandingPage /></PageWrapper>
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/share/:id" 
+        element={<PageWrapper><SharedDashboardPage /></PageWrapper>} 
+      />
+      <Route 
+        path="/login" 
+        element={
+          <PublicRoute>
+            <PageWrapper><LoginPage /></PageWrapper>
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/register" 
+        element={
+          <PublicRoute>
+            <PageWrapper><RegisterPage /></PageWrapper>
+          </PublicRoute>
+        } 
+      />
+      <Route 
+        path="/forgot-password" 
+        element={
+          <PublicRoute>
+            <PageWrapper><ForgotPasswordPage /></PageWrapper>
+          </PublicRoute>
+        } 
+      />
 
-        {/* Protected Routes inside Layout */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<PageWrapper><DashboardPage /></PageWrapper>} />
-          <Route path="papers" element={<PageWrapper><PapersPage /></PageWrapper>} />
-          <Route path="papers/:paperId" element={<PageWrapper><PaperDetailPage /></PageWrapper>} />
-          <Route path="global-research" element={<PageWrapper><GlobalResearchPage /></PageWrapper>} />
-          <Route path="profile" element={<PageWrapper><ProfilePage /></PageWrapper>} />
-        </Route>
+      {/* Protected Routes inside Layout */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="dashboard" element={<PageWrapper><DashboardPage /></PageWrapper>} />
+        <Route path="papers" element={<PageWrapper><PapersPage /></PageWrapper>} />
+        <Route path="papers/:paperId" element={<PageWrapper><PaperDetailPage /></PageWrapper>} />
+        <Route path="global-research" element={<PageWrapper><GlobalResearchPage /></PageWrapper>} />
+        <Route path="arxiv" element={<PageWrapper><ArxivPage /></PageWrapper>} />
+        <Route path="graph" element={<PageWrapper><GraphPage /></PageWrapper>} />
+        <Route path="profile" element={<PageWrapper><ProfilePage /></PageWrapper>} />
+        <Route path="settings" element={<PageWrapper><SettingsPage /></PageWrapper>} />
+      </Route>
 
-        {/* Catch-all */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AnimatePresence>
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 
@@ -123,9 +141,11 @@ function App() {
   }, [hydrate])
 
   return (
-    <BrowserRouter>
-      <AnimatedRoutes />
-    </BrowserRouter>
+    <LanguageProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AnimatedRoutes />
+      </BrowserRouter>
+    </LanguageProvider>
   )
 }
 

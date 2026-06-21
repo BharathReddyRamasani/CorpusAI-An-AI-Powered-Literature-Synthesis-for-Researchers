@@ -13,8 +13,8 @@ class ChatHistory(Base):
     __tablename__ = "chat_history"
 
     id: int = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    paper_id: str = Column(String(64), ForeignKey("papers.paper_id"), nullable=False, index=True)
-    user_id: int = Column(Integer, ForeignKey("users.id"), nullable=False)
+    paper_id: str = Column(String(64), ForeignKey("papers.paper_id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: int = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     question: str = Column(Text, nullable=False)
     answer: str = Column(Text, nullable=False)
     timestamp: datetime = Column(DateTime, server_default=func.now(), nullable=False)

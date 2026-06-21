@@ -9,17 +9,20 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Option 1: Map persistent volumes to the host machine
       - ./backend/uploads:/app/uploads
       - ./backend/reports:/app/reports
       - ./backend/chroma_db:/app/chroma_db
       - ./backend/research_assistant.db:/app/research_assistant.db
+    env_file:
+      - ./backend/.env
     environment:
-      # We rely on the .env file being copied inside the container via Dockerfile,
-      # or you can explicitly declare an env_file here:
-      # env_file: ./backend/.env
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
 
   frontend:
     build:
@@ -31,3 +34,8 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G

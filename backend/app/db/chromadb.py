@@ -7,6 +7,13 @@ Compatible with chromadb 0.4.x API.
 import logging
 from typing import Optional
 
+import os
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
+import logging
+logging.getLogger("chromadb.telemetry").setLevel(logging.CRITICAL)
+logging.getLogger("chromadb").setLevel(logging.CRITICAL)
+
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 

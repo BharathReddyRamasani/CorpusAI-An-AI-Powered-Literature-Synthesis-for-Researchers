@@ -1,6 +1,6 @@
 import logging
-import random
-from google.api_core.exceptions import ResourceExhausted
+import asyncio
+from google.api_core.exceptions import ResourceExhausted, InvalidArgument
 import google.generativeai as genai
 
 from app.config import settings
@@ -8,83 +8,66 @@ from app.utils.exceptions import ServiceException
 
 logger = logging.getLogger("app")
 
-# Global state to keep track of the current key index
 _current_key_index = 0
+_model_cache: dict = {}
 
 def _get_api_keys() -> list[str]:
-    """Parse all available Gemini API keys from settings."""
-    keys = []
-    # If the user provided a comma-separated list of keys
-    if hasattr(settings, "gemini_api_keys") and settings.gemini_api_keys:
-        keys = [k.strip() for k in settings.gemini_api_keys.split(",") if k.strip()]
-    
-    # Fallback to single key if list is empty
-    if not keys and settings.gemini_api_key:
-        keys = [settings.gemini_api_key.strip()]
-        
-    return keys
+    try:
+        return settings.gemini_keys_list
+    except ValueError:
+        return []
+
+def _get_cached_model(api_key: str, model_name: str, system_prompt: str):
+    cache_key = (api_key, model_name)
+    if cache_key not in _model_cache:
+        # CRITICAL FIX: client_options={'api_key': ...} forces gRPC
+        # which correctly accepts AQ. keys! REST rejects them.
+        genai.configure(client_options={'api_key': api_key})
+            
+        _model_cache[cache_key] = genai.GenerativeModel(
+            model_name=model_name,
+            system_instruction=system_prompt,
+        )
+        logger.debug(f"[Gemini] Cached new model instance for key ...{api_key[-4:]}")
+    return _model_cache[cache_key]
 
 async def call_gemini_api_with_rotation(prompt: str, system_prompt: str) -> str:
-    """
-    Call Gemini API and automatically rotate to the next API key 
-    if a Rate Limit (ResourceExhausted 429) error occurs.
-    """
     global _current_key_index
     keys = _get_api_keys()
     
     if not keys:
-        raise ServiceException("No Gemini API keys configured. Please add them to your .env file.")
+        raise ServiceException("No Gemini API keys configured.")
 
+    model_name = settings.gemini_model
     attempts = 0
-    max_attempts = len(keys)
+    max_attempts = len(keys) * 2
     
     while attempts < max_attempts:
-        current_key = keys[_current_key_index]
-        genai.configure(api_key=current_key)
-        
-        model = genai.GenerativeModel(
-            model_name=settings.gemini_model,
-            system_instruction=system_prompt
-        )
+        current_key = keys[_current_key_index % len(keys)]
         
         try:
+            model = _get_cached_model(current_key, model_name, system_prompt)
             response = await model.generate_content_async(prompt)
-            return response.text
             
-        except ResourceExhausted as e:
-            logger.warning(f"Key {_current_key_index + 1}/{len(keys)} hit rate limit. Rotating to next key...")
-            # Move to the next key in the list
+            if getattr(response, "candidates", None) and response.candidates:
+                content = response.candidates[0].content
+                if content and getattr(content, "parts", None):
+                    return "".join(getattr(p, "text", "") for p in content.parts)
+            return getattr(response, "text", str(response))
+            
+        except (ResourceExhausted, InvalidArgument) as e:
+            logger.warning(f"Key {_current_key_index + 1}/{len(keys)} hit error ({type(e).__name__}). Rotating to next key...")
             _current_key_index = (_current_key_index + 1) % len(keys)
             attempts += 1
             
+            if attempts >= len(keys):
+                sleep_time = min(5, 1.5 ** (attempts - len(keys)))
+                logger.info(f"All keys exhausted, sleeping for {sleep_time:.1f}s before retrying...")
+                await asyncio.sleep(sleep_time)
+            
         except Exception as e:
-            # For any other error (like bad prompt, disconnected), fail immediately
             logger.error(f"Gemini API Error: {e}", exc_info=True)
             raise ServiceException(f"Gemini API failed: {str(e)}")
 
-    # If we tried all keys and all of them are exhausted
-    logger.warning("All Gemini API keys exhausted. Falling back to Groq API...")
-    try:
-        import httpx
-        import os
-        groq_api_key = os.getenv("GROQ_API_KEY", "fallback_key_here")
-        headers = {
-            "Authorization": f"Bearer {groq_api_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": "llama-3.3-70b-versatile",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.3
-        }
-        async with httpx.AsyncClient() as client:
-            res = await client.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload, timeout=60.0)
-            res.raise_for_status()
-            data = res.json()
-            return data["choices"][0]["message"]["content"]
-    except Exception as groq_err:
-        logger.error(f"Groq API Fallback Error: {groq_err}", exc_info=True)
-        raise ServiceException("All Gemini API keys are currently rate-limited, and the Groq fallback failed. Please wait or add more keys to your .env file.")
+    logger.error("All Gemini API keys exhausted.")
+    raise ServiceException("All Gemini API keys are currently unavailable.")

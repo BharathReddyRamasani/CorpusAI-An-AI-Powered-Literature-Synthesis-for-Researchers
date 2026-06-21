@@ -48,16 +48,16 @@ logger = logging.getLogger("app")
 
 @router.post(
     "/register",
-    response_model=RegisterResponse,
+    response_model=LoginResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Register a new user and send OTP",
+    summary="Register a new user and send OTP (or auto-verify in dev mode)",
 )
 async def register(
     payload: RegisterRequest,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-) -> RegisterResponse:
-    """Register a new user account and trigger OTP email."""
+):
+    """Register a new user account and trigger OTP email (or auto-verify if no SMTP configured)."""
     # Check if email already exists
     existing = await db.execute(select(User).where(User.email == payload.email))
     existing_user = existing.scalar_one_or_none()
@@ -75,7 +75,28 @@ async def register(
         user = User(name=payload.name, email=payload.email, password_hash=hashed, is_verified=False)
         db.add(user)
 
-    # Generate 6 digit OTP
+    # Auto-verify if SMTP is not configured (Development Mode)
+    from app.config import settings
+    if not settings.smtp_email:
+        user.is_verified = True
+        user.otp = None
+        user.otp_expires_at = None
+        await db.flush()
+        await db.refresh(user)
+        
+        token = create_access_token(subject=user.id, role=user.role)
+        logger.info(f"Auto-verified new user (Dev Mode): {user.email}")
+        
+        return LoginResponse(
+            message="Auto-verified in dev mode.",
+            token=TokenResponse(
+                access_token=token,
+                expires_in=get_token_expiry_seconds(),
+            ),
+            user=UserResponse.model_validate(user),
+        )
+
+    # Generate 6 digit OTP for production
     otp = "".join(random.choices(string.digits, k=6))
     user.otp = otp
     user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
@@ -87,11 +108,12 @@ async def register(
     background_tasks.add_task(send_otp_email, user.email, otp)
 
     logger.info(f"New user registered: {user.email} (id={user.id})")
-    logger.info(f"HUGGING FACE DEMO MODE - YOUR OTP IS: {otp}")
-    return RegisterResponse(
-        message="Registration successful. Please check your email for the OTP.",
-        user=UserResponse.model_validate(user),
-    )
+    
+    return {
+        "message": "Registration successful. Please check your email for the OTP.",
+        "user": UserResponse.model_validate(user),
+        "token": None
+    }
 
 
 # ── POST /api/auth/verify-otp ─────────────────────────────────────────────────

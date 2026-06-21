@@ -29,10 +29,10 @@ from app.schemas.paper import (
     SummaryResponse,
 )
 from app.schemas.report import GenerateReportResponse, ReportRequest
-from app.services import paper_service, summary_service, report_service
+from app.services import paper_service, summary_service, report_service, url_service
 from app.utils.dependencies import get_current_user, get_db
 from app.utils.exceptions import BadRequestException, NotFoundException
-from app.utils.helpers import validate_pdf_file, validate_file_size
+from app.utils.helpers import validate_supported_file, validate_file_size
 
 router = APIRouter(prefix="/api/papers", tags=["Research Papers"])
 logger = logging.getLogger("app")
@@ -43,22 +43,22 @@ logger = logging.getLogger("app")
 @router.post(
     "/upload",
     response_model=PaperUploadResponse,
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Upload a research paper PDF",
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a research paper or file",
 )
 async def upload_paper(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(..., description="PDF file to upload"),
+    file: UploadFile = File(..., description="File to upload (PDF, Audio, Image, Text)"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> PaperUploadResponse:
     """
-    Upload a PDF research paper. Triggers the processing pipeline asynchronously.
+    Upload a research file. Triggers the processing pipeline asynchronously.
     
     Workflow: Validate → Save → Create DB Record → Background Processing
     """
     # Validate file type
-    validate_pdf_file(file)
+    validate_supported_file(file)
 
     # Read and validate file size
     content = await validate_file_size(file)
@@ -87,9 +87,138 @@ async def upload_paper(
 
     background_tasks.add_task(run_pipeline, paper.paper_id)
 
+    # Explicitly commit here to avoid race condition where frontend 
+    # refetches the list before the dependency teardown commit happens.
+    await db.commit()
+
     logger.info(f"Paper upload accepted: {paper.paper_id} by user {current_user.id}")
     return PaperUploadResponse(
         message="Paper uploaded successfully. Processing has started in the background.",
+        paper_id=paper.paper_id,
+        filename=paper.filename,
+        status=paper.status,
+    )
+
+
+# ── POST /api/papers/upload-text ──────────────────────────────────────────────
+
+from pydantic import BaseModel, Field
+
+class TextUploadRequest(BaseModel):
+    title: str = Field(..., description="Title of the pasted text")
+    content: str = Field(..., description="The actual raw text content")
+
+@router.post(
+    "/upload-text",
+    response_model=PaperUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload raw text directly",
+)
+async def upload_text(
+    payload: TextUploadRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> PaperUploadResponse:
+    """
+    Upload raw text directly without a file.
+    Creates a synthetic .txt file and processes it.
+    """
+    if not payload.content.strip():
+        raise BadRequestException("Content cannot be empty.")
+    
+    filename = f"{payload.title.replace(' ', '_')}.txt"
+    file_content = payload.content.encode('utf-8')
+
+    # Create paper record and save file
+    paper = await paper_service.create_paper(
+        db=db,
+        user_id=current_user.id,
+        filename=filename,
+        file_content=file_content,
+    )
+
+    from app.db.sqlite import AsyncSessionLocal
+
+    async def run_pipeline(paper_id: str) -> None:
+        async with AsyncSessionLocal() as bg_session:
+            try:
+                await paper_service.process_paper_pipeline(bg_session, paper_id)
+                await bg_session.commit()
+            except Exception as e:
+                await bg_session.rollback()
+                logger.error(f"Background pipeline failed for text {paper_id}: {e}")
+
+    background_tasks.add_task(run_pipeline, paper.paper_id)
+
+    # Explicitly commit here to avoid race condition where frontend 
+    # refetches the list before the dependency teardown commit happens.
+    await db.commit()
+
+    logger.info(f"Text upload accepted: {paper.paper_id} by user {current_user.id}")
+    return PaperUploadResponse(
+        message="Text uploaded successfully. Processing has started in the background.",
+        paper_id=paper.paper_id,
+        filename=paper.filename,
+        status=paper.status,
+    )
+
+
+# ── POST /api/papers/upload-url ───────────────────────────────────────────────
+
+from app.schemas.paper import URLUploadRequest
+
+@router.post(
+    "/upload-url",
+    response_model=PaperUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a paper via Web URL",
+)
+async def upload_url(
+    payload: URLUploadRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> PaperUploadResponse:
+    """
+    Downloads and extracts text from a given URL.
+    Creates a synthetic .txt file and processes it.
+    """
+    url_str = str(payload.url)
+    
+    # Extract content using url_service
+    title, text_content = url_service.extract_url_content(url_str)
+    
+    filename = f"{title.replace(' ', '_')[:50]}.txt"
+    file_content = text_content.encode('utf-8')
+
+    # Create paper record and save file
+    paper = await paper_service.create_paper(
+        db=db,
+        user_id=current_user.id,
+        filename=filename,
+        file_content=file_content,
+    )
+
+    from app.db.sqlite import AsyncSessionLocal
+
+    async def run_pipeline(paper_id: str) -> None:
+        async with AsyncSessionLocal() as bg_session:
+            try:
+                await paper_service.process_paper_pipeline(bg_session, paper_id)
+                await bg_session.commit()
+            except Exception as e:
+                await bg_session.rollback()
+                logger.error(f"Background pipeline failed for url {paper_id}: {e}")
+
+    background_tasks.add_task(run_pipeline, paper.paper_id)
+
+    # Explicitly commit here
+    await db.commit()
+
+    logger.info(f"URL upload accepted: {paper.paper_id} by user {current_user.id}")
+    return PaperUploadResponse(
+        message="URL uploaded successfully. Processing has started in the background.",
         paper_id=paper.paper_id,
         filename=paper.filename,
         status=paper.status,
@@ -153,7 +282,7 @@ async def reprocess_paper(
 )
 async def list_papers(
     page: int = Query(default=1, ge=1, description="Page number"),
-    page_size: int = Query(default=10, ge=1, le=100, description="Items per page"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     search: str = Query(default="", description="Search by title, authors, or abstract"),
     sort_by: str = Query(default="upload_date", description="Sort field"),
     sort_order: str = Query(default="desc", pattern="^(asc|desc)$", description="Sort order"),

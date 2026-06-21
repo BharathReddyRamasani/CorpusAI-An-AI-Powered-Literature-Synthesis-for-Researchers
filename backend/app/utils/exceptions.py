@@ -70,6 +70,15 @@ class ConflictException(AppException):
         )
 
 
+class RateLimitException(AppException):
+    def __init__(self, detail: str = "Too many requests. Please wait and try again.") -> None:
+        super().__init__(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=detail,
+            error_code="TOO_MANY_REQUESTS",
+        )
+
+
 class ServiceException(AppException):
     def __init__(self, detail: str = "Internal service error.") -> None:
         super().__init__(

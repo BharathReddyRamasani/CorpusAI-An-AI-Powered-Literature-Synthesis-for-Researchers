@@ -13,7 +13,7 @@ class Paper(Base):
     __tablename__ = "papers"
 
     paper_id: str = Column(String(64), primary_key=True, index=True)
-    user_id: int = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id: int = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     filename: str = Column(String(512), nullable=False)
     file_path: str = Column(String(1024), nullable=True)
     title: str = Column(String(1024), nullable=True)

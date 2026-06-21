@@ -86,3 +86,38 @@ class ChartData(BaseModel):
 
 class VisualizationResponse(BaseModel):
     charts: List[ChartData]
+
+
+class ArxivImportRequest(BaseModel):
+    url: str
+    title: str
+
+class WebSearchRequest(BaseModel):
+    question: str
+
+class PeerReviewRequest(BaseModel):
+    paper_id: str
+
+class PeerReviewScores(BaseModel):
+    novelty: int
+    methodology: int
+    clarity: int
+
+class PeerReviewResponse(BaseModel):
+    scores: PeerReviewScores
+    critiques: List[str]
+    improvements: List[str]
+    overall_decision: str
+
+class TranslateRequest(BaseModel):
+    text: str
+    target_language: str
+
+class TranslateResponse(BaseModel):
+    translated_text: str
+
+class ShareDashboardRequest(BaseModel):
+    snapshot_data: Dict[str, Any]
+
+class ShareDashboardResponse(BaseModel):
+    share_id: str

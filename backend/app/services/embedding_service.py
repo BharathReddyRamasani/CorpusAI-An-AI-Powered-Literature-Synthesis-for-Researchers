@@ -5,6 +5,10 @@ Singleton pattern to load the model once at startup.
 """
 
 import logging
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 from typing import Optional
 
 from app.config import settings
@@ -38,10 +42,19 @@ def generate_embedding(text: str) -> list[float]:
 
     Returns:
         List of floats representing the embedding vector.
+    
+    PERFORMANCE: Passes text as a list to go through the same optimized
+    batch encode path as generate_embeddings_batch().
     """
     model = _get_model()
-    embedding = model.encode(text, normalize_embeddings=True)
-    return embedding.tolist()
+    # Use list input to hit the same optimized batch path as bulk embedding
+    embedding = model.encode(
+        [text],
+        normalize_embeddings=True,
+        batch_size=1,
+        show_progress_bar=False,
+    )
+    return embedding[0].tolist()
 
 
 def generate_embeddings_batch(texts: list[str]) -> list[list[float]]:

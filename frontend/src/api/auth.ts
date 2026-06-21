@@ -15,6 +15,10 @@ export interface RegisterResponse {
   success: boolean;
   message: string;
   user: User;
+  token?: {
+    access_token: string;
+    expires_in: number;
+  };
 }
 
 export const authApi = {

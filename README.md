@@ -1,5 +1,5 @@
 ---
-title: AI Research Assistant
+title: Corpus AI
 emoji: 🧠
 colorFrom: indigo
 colorTo: purple
@@ -7,7 +7,7 @@ sdk: docker
 pinned: false
 ---
 
-# AI Research Assistant
+# Corpus AI
 
 This is a comprehensive Hackathon Platform consisting of a React + Vite Frontend and a FastAPI Backend.
 

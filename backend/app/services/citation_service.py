@@ -34,8 +34,8 @@ AUTHOR_YEAR_PATTERN = re.compile(
     re.MULTILINE,
 )
 
-# Year extraction
-YEAR_PATTERN = re.compile(r"[\(\[](\d{4})[\)\]]\.*")
+# Year extraction: try to find (YYYY), [YYYY], or just YYYY if preceded by punctuation/space
+YEAR_PATTERN = re.compile(r"(?:[\(\[]\s*(19\d{2}|20\d{2})\s*[\)\]]|(?:^|\b)(19\d{2}|20\d{2})(?:\b|$))")
 
 # Title extraction (text after year, before journal/venue)
 TITLE_AFTER_YEAR_PATTERN = re.compile(
@@ -89,7 +89,7 @@ def _parse_single_reference(raw_ref: str) -> ParsedCitation:
     # Extract year
     year_match = YEAR_PATTERN.search(raw_ref)
     if year_match:
-        citation.year = year_match.group(1)
+        citation.year = year_match.group(1) or year_match.group(2)
 
     # Extract author: text before the year or first period
     if year_match:

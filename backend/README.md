@@ -1,4 +1,4 @@
-# AI Research Assistant — Backend
+# Corpus AI — Backend
 
 A **production-ready FastAPI backend** for analyzing research papers using AI.
 

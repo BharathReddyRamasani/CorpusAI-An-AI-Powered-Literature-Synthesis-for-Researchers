@@ -45,9 +45,25 @@ export interface CitationIntelligenceResponse {
   top_datasets: string[];
 }
 
+export interface PeerReviewResponse {
+  scores: {
+    novelty: number;
+    methodology: number;
+    clarity: number;
+  };
+  critiques: string[];
+  improvements: string[];
+  overall_decision: string;
+}
+
 export const researchApi = {
   globalChat: async (data: { paper_ids: string[]; question: string }): Promise<GlobalChatResponse> => {
     const response = await api.post('/api/research/global-chat', data)
+    return response.data
+  },
+
+  webSearch: async (data: { question: string }): Promise<GlobalChatResponse> => {
+    const response = await api.post('/api/research/web-search', data)
     return response.data
   },
 
@@ -71,8 +87,56 @@ export const researchApi = {
     return response.data
   },
 
+  generatePeerReview: async (data: { paper_id: string }): Promise<PeerReviewResponse> => {
+    const response = await api.post('/api/research/peer-review', data)
+    return response.data
+  },
+
+  translateText: async (data: { text: string, target_language: string }): Promise<{ translated_text: string }> => {
+    const response = await api.post('/api/research/translate', data)
+    return response.data
+  },
+
   getCitationIntelligence: async (): Promise<CitationIntelligenceResponse> => {
     const response = await api.get('/api/research/citation-intelligence')
     return response.data
+  },
+
+  searchArxiv: async (query: string, limit: number = 10): Promise<ArxivPaper[]> => {
+    const response = await api.get(`/api/research/arxiv/search?q=${encodeURIComponent(query)}&limit=${limit}`)
+    return response.data
+  },
+
+  getArxivRecommendations: async (): Promise<ArxivPaper[]> => {
+    const response = await api.get('/api/research/arxiv/recommendations')
+    return response.data
+  },
+
+  importArxivPaper: async (data: { url: string; title: string }): Promise<any> => {
+    const response = await api.post('/api/research/arxiv/import', data)
+    return response.data
+  },
+
+  generatePodcast: async (data: { paper_ids: string[] }): Promise<Blob> => {
+    const response = await api.post('/api/research/podcast', data, { responseType: 'blob' })
+    return response.data
+  },
+
+  shareDashboard: async (data: { snapshot_data: any }): Promise<{ share_id: string }> => {
+    const response = await api.post('/api/research/share', data)
+    return response.data
+  },
+
+  getSharedDashboard: async (id: string): Promise<{ snapshot_data: any, created_at: string }> => {
+    const response = await api.get(`/api/research/share/${id}`)
+    return response.data
   }
+}
+
+export interface ArxivPaper {
+  title: string;
+  summary: string;
+  authors: string[];
+  published: string;
+  pdf_url: string;
 }

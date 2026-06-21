@@ -1,5 +1,5 @@
 """
-AI Research Assistant — FastAPI Application Entry Point
+Corpus AI — FastAPI Application Entry Point
 
 Features:
 - Modular router registration
@@ -56,10 +56,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"Swagger UI: http://{settings.host}:{settings.port}/docs")
     logger.info(f"ReDoc:      http://{settings.host}:{settings.port}/redoc")
 
-    yield
-
-    # ── Shutdown ──
-    logger.info("Application shutting down...")
+    import asyncio
+    
+    try:
+        yield
+    except asyncio.exceptions.CancelledError:
+        pass
+    finally:
+        # ── Shutdown ──
+        logger.info("Application shutting down...")
 
 
 # ── App Factory ───────────────────────────────────────────────────────────────
@@ -70,7 +75,7 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version=settings.app_version,
         description="""
-## AI Research Assistant API
+## Corpus AI API
 
 A production-ready backend for analyzing research papers through:
 
@@ -97,7 +102,7 @@ All endpoints (except `/api/auth/register` and `/api/auth/login`) require a **Be
     # ── CORS ──────────────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Restrict in production
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -119,13 +124,14 @@ All endpoints (except `/api/auth/register` and `/api/auth/login`) require a **Be
     register_exception_handlers(app)
 
     # ── Routers ───────────────────────────────────────────────────────────────
-    from app.api import auth, papers, chat, reports, admin, research
+    from app.api import auth, papers, chat, reports, admin, research, graph
     app.include_router(auth.router)
     app.include_router(papers.router)
     app.include_router(chat.router)
     app.include_router(reports.router)
     app.include_router(admin.router)
     app.include_router(research.router)
+    app.include_router(graph.router)
 
     # ── Health Check ──────────────────────────────────────────────────────────
     @app.get(

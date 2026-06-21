@@ -17,6 +17,8 @@ build/
 chroma_db/
 uploads/
 reports/
+data/logs/
+*.log
 
 # OS files
 .DS_Store
