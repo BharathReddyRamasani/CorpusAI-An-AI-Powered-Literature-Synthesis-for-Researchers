@@ -29,7 +29,7 @@ def _get_cached_client(api_key: str):
     retry=retry_if_exception_type((RateLimitError, InternalServerError, APIConnectionError)),
     reraise=True
 )
-async def call_groq_api_with_rotation(prompt: str, system_prompt: str, is_json: bool = False) -> str:
+async def call_groq_api_with_rotation(prompt: str, system_prompt: str, is_json: bool = False, max_tokens: int = None) -> str:
     global _current_key_index
     keys = _get_api_keys()
     
@@ -53,6 +53,8 @@ async def call_groq_api_with_rotation(prompt: str, system_prompt: str, is_json: 
         }
         if is_json:
             kwargs["response_format"] = {"type": "json_object"}
+        if max_tokens is not None:
+            kwargs["max_tokens"] = max_tokens
         
         response = await client.chat.completions.create(**kwargs)
         return response.choices[0].message.content

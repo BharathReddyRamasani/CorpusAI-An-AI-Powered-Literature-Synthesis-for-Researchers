@@ -32,11 +32,11 @@ async def run(paper_id: str, db, **kwargs) -> str:
     if not full_text or len(full_text.strip()) < 100:
         raise BadRequestException("Paper has insufficient text for summarization.")
 
-    # Groq free tier limit is 8000 TPM (~24,000 chars), so we truncate aggressively
-    paper_text = full_text[:20000]
+    # Groq free tier limit is 6000 TPM (~24,000 chars total), so we truncate aggressively
+    paper_text = full_text[:8000]
     prompt = SUMMARY_USER_PROMPT.format(paper_text=paper_text)
 
     logger.info(f"[Summary Agent] Invoking Groq LLM...")
-    summary_text = await call_groq_api_with_rotation(prompt, SUMMARY_SYSTEM_PROMPT)
+    summary_text = await call_groq_api_with_rotation(prompt, SUMMARY_SYSTEM_PROMPT, max_tokens=800)
     logger.info(f"[Summary Agent] Done. length={len(summary_text)}")
     return summary_text

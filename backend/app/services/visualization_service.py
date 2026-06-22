@@ -52,10 +52,10 @@ Return the result STRICTLY as a JSON object with this exact structure:
 
 Paper Title: {paper.title}
 Abstract: {paper.abstract}
-Full Text (partial): {paper.full_text[:15000] if paper.full_text else ""}
+Full Text (partial): {paper.full_text[:8000] if paper.full_text else ""}
 """
 
-    response_text = await call_groq_api_with_rotation(prompt, system_prompt)
+    response_text = await call_groq_api_with_rotation(prompt, system_prompt, max_tokens=800)
     try:
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
@@ -114,10 +114,10 @@ Note: "type" must be one of: "bar", "line", "pie". If no numerical data is found
 
 Paper Title: {paper.title}
 Abstract: {paper.abstract}
-Results Section: {paper.full_text[:15000] if paper.full_text else ""}
+Results Section: {paper.full_text[:8000] if paper.full_text else ""}
 """
 
-    response_text = await call_groq_api_with_rotation(prompt, system_prompt)
+    response_text = await call_groq_api_with_rotation(prompt, system_prompt, max_tokens=800)
     try:
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
