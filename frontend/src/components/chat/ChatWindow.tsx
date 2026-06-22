@@ -278,7 +278,14 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ paperId }) => {
                   <div className="w-8 h-8 shrink-0 rounded-full bg-gradient-to-tr from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white mt-1 shadow-md shadow-[var(--color-primary)]/20">
                     <Bot size={14} />
                   </div>
-                  <div className="bg-[var(--color-surface)] border border-[var(--color-border)] px-6 py-5 rounded-[20px] rounded-tl-sm shadow-sm prose-custom max-w-none text-[15px] overflow-hidden">
+                  <div className="relative group bg-[var(--color-surface)] border border-[var(--color-border)] px-6 py-5 rounded-[20px] rounded-tl-sm shadow-sm prose-custom max-w-none text-[15px] overflow-hidden">
+                    <button
+                      onClick={() => speak(msg.answer || '')}
+                      className="absolute top-3 right-3 p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] opacity-0 group-hover:opacity-100 transition-all z-10"
+                      title="Read aloud (JARVIS)"
+                    >
+                      <Volume2 size={16} />
+                    </button>
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
                       components={{ code: ChartRenderer as any }}
