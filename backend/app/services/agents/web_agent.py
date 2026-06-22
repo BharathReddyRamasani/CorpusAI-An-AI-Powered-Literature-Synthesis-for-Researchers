@@ -18,13 +18,18 @@ logger = logging.getLogger("app")
 async def search_duckduckgo(query: str, max_results: int = 3) -> list[str]:
     """Search duckduckgo using the duckduckgo_search package."""
     try:
-        from duckduckgo_search import DDGS
         import asyncio
         
         def _search():
+            try:
+                from ddgs import DDGS
+            except ImportError:
+                from duckduckgo_search import DDGS
+                
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=max_results))
-                return [r.get("href") for r in results if r.get("href")]
+                # Newer versions use 'link', older use 'href'
+                return [r.get("link", r.get("href")) for r in results if r.get("link", r.get("href"))]
 
         loop = asyncio.get_event_loop()
         links = await loop.run_in_executor(None, _search)
