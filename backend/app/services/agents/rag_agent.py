@@ -105,15 +105,25 @@ _compiled = _build_graph()
 
 # ── Public Interface ──────────────────────────────────────────────────────────
 
-async def run(question: str, paper_id: str, section: str = None, **kwargs) -> tuple[str, list[str]]:
+async def run(question: str, paper_id: str, section: str = None, history: list[dict] = None, **kwargs) -> tuple[str, list[str]]:
     """
     Run the RAG agent for a single-paper Q&A.
 
     Returns:
         (answer, source_snippets)
     """
+    from langchain_core.messages import AIMessage
+    
+    messages = []
+    if history:
+        for h in history[-5:]:  # Keep only the last 5 exchanges to avoid context bloat
+            messages.append(HumanMessage(content=h["question"]))
+            messages.append(AIMessage(content=h["answer"]))
+            
+    messages.append(HumanMessage(content=question))
+
     initial_state: AgentState = {
-        "messages": [HumanMessage(content=question)],
+        "messages": messages,
         "paper_id": paper_id,
         "paper_ids": None,
         "section": section,

@@ -47,12 +47,17 @@ async def answer_question(
 
     logger.info(f"[RAG Service] Dispatching to RAG Agent: paper_id={paper_id}")
 
+    # Fetch previous chat history
+    history = await get_chat_history(db, paper_id, user_id)
+    history_formatted = [{"question": h.question, "answer": h.answer} for h in history]
+
     from app.services.agents.supervisor import dispatch
     answer, source_snippets = await dispatch(
         "rag",
         question=question,
         paper_id=paper_id,
         section=section,
+        history=history_formatted,
         db=db,
     )
 
