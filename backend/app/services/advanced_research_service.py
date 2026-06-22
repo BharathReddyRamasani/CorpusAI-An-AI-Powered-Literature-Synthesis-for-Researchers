@@ -142,18 +142,26 @@ async def get_semantic_recommendations(
     
     if not titles:
         # Default fallback query if no papers
-        return search_arxiv("artificial intelligence", max_results=10)
+        import asyncio
+        return await asyncio.to_thread(search_arxiv, "artificial intelligence", 10)
         
+    import re
+    import asyncio
+    
+    # Strip extensions and replace underscores/dashes with spaces
+    clean_titles = [re.sub(r'\.(pdf|txt|md|docx)$', '', t, flags=re.IGNORECASE) for t in titles]
+    clean_titles = [t.replace('_', ' ').replace('-', ' ') for t in clean_titles]
+    
     # Build a simple semantic query from the latest titles
-    words = " ".join(titles).split()
+    words = " ".join(clean_titles).split()
     
     # Clean words and filter out common short words to keep it broad
-    import re
     cleaned_words = [re.sub(r'[^a-zA-Z]', '', w).lower() for w in words]
-    keywords = list(set([w for w in cleaned_words if len(w) > 6]))
+    # Filter out likely hex hashes and short words
+    keywords = list(set([w for w in cleaned_words if len(w) > 4 and not re.fullmatch(r'[0-9a-f]+', w)]))
     
     # Use only 1 or 2 keywords to ensure we get plenty of results (broad search)
     query = " ".join(keywords[:2]) if keywords else "artificial intelligence"
     
     logger.info(f"[Adv Research Service] Recommending based on query: {query}")
-    return search_arxiv(query, max_results=10)
+    return await asyncio.to_thread(search_arxiv, query, 10)

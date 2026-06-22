@@ -6,10 +6,41 @@ from typing import List, Dict, Any
 import tempfile
 import os
 from pathlib import Path
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+from urllib.error import URLError, HTTPError
 
 logger = logging.getLogger("app")
 
 ARXIV_API_URL = "http://export.arxiv.org/api/query"
+
+def _is_retryable_exception(exception):
+    if isinstance(exception, HTTPError):
+        return exception.code in (429, 500, 502, 503, 504)
+    if isinstance(exception, URLError) or isinstance(exception, TimeoutError):
+        return True
+    return False
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1.5, min=4, max=30),
+    retry=retry_if_exception(_is_retryable_exception),
+    reraise=True
+)
+def _do_arxiv_request(url: str, timeout: int = 30) -> bytes:
+    """Helper method to make a request to ArXiv with retries."""
+    req = urllib.request.Request(url, headers={'User-Agent': 'AI-Research-Assistant/1.0'})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            return response.read()
+    except HTTPError as e:
+        if e.code in (429, 500, 502, 503, 504):
+            logger.warning(f"ArXiv API returned {e.code}, retrying...")
+            raise e
+        logger.error(f"ArXiv API HTTP Error {e.code}: {e}")
+        raise e
+    except (URLError, TimeoutError) as e:
+        logger.warning(f"ArXiv API network error: {e}, retrying...")
+        raise e
 
 def search_arxiv(query: str, max_results: int = 10) -> List[Dict[str, Any]]:
     """
@@ -23,9 +54,7 @@ def search_arxiv(query: str, max_results: int = 10) -> List[Dict[str, Any]]:
         
         logger.info(f"Querying ArXiv API: {url}")
         
-        req = urllib.request.Request(url, headers={'User-Agent': 'AI-Research-Assistant/1.0'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            xml_data = response.read()
+        xml_data = _do_arxiv_request(url, timeout=30)
             
         root = ET.fromstring(xml_data)
         ns = {'atom': 'http://www.w3.org/2005/Atom'}
@@ -93,10 +122,9 @@ def download_arxiv_pdf(pdf_url: str, title: str) -> Path:
         temp_dir = tempfile.gettempdir()
         file_path = Path(temp_dir) / safe_title
         
-        req = urllib.request.Request(pdf_url, headers={'User-Agent': 'AI-Research-Assistant/1.0'})
-        with urllib.request.urlopen(req, timeout=30) as response:
-            with open(file_path, 'wb') as f:
-                f.write(response.read())
+        pdf_data = _do_arxiv_request(pdf_url, timeout=30)
+        with open(file_path, 'wb') as f:
+            f.write(pdf_data)
                 
         return file_path
     except Exception as e:

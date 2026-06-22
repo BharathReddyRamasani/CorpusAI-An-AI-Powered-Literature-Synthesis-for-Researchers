@@ -20,17 +20,21 @@ const ArxivPage = () => {
   const [arxivQuery, setArxivQuery] = useState('')
   const [arxivResults, setArxivResults] = useState<ArxivPaper[]>([])
   const [arxivRecommendations, setArxivRecommendations] = useState<ArxivPaper[]>([])
+  const [loadingRecommendations, setLoadingRecommendations] = useState(true)
   const [arxivSearching, setArxivSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
   const [importingUrls, setImportingUrls] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     researchApi.getArxivRecommendations()
       .then(setArxivRecommendations)
       .catch(() => {})
+      .finally(() => setLoadingRecommendations(false))
   }, [])
 
   const handleArxivSearch = async () => {
     if (!arxivQuery.trim()) return toast.error('Enter a search query')
+    setHasSearched(true)
     setArxivSearching(true)
     try { 
       setArxivResults(await researchApi.searchArxiv(arxivQuery)) 
@@ -90,10 +94,18 @@ const ArxivPage = () => {
       <div className="flex-1 pr-2 pb-8">
         <div className="space-y-6">
           {/* Section Headers */}
-          {arxivResults.length > 0 && !arxivSearching && (
+          {hasSearched && arxivResults.length > 0 && !arxivSearching && (
             <h2 className="font-display text-xl font-bold mb-4 text-[var(--color-text-primary)]">Search Results</h2>
           )}
-          {arxivResults.length === 0 && arxivRecommendations.length > 0 && !arxivSearching && (
+          
+          {!hasSearched && loadingRecommendations && (
+            <div className="flex justify-center items-center py-12">
+              <Spinner size="md" />
+              <span className="ml-3 text-[var(--color-text-muted)]">Analyzing your library to find recommendations...</span>
+            </div>
+          )}
+
+          {!hasSearched && arxivRecommendations.length > 0 && !loadingRecommendations && (
             <div className="mb-6 p-4 rounded-[16px] bg-[color-mix(in_srgb,var(--color-primary)_8%,transparent)] border border-[color-mix(in_srgb,var(--color-primary)_20%,transparent)]">
               <h2 className="font-display text-lg font-bold text-[var(--color-primary)] flex items-center gap-2 mb-1">
                 <Sparkles size={18} /> Recommended for You
@@ -134,10 +146,11 @@ const ArxivPage = () => {
             ))}
           </AnimatePresence>
           
-          {arxivResults.length === 0 && arxivRecommendations.length === 0 && !arxivSearching && (
+          {((!hasSearched && arxivRecommendations.length === 0 && !loadingRecommendations) || 
+            (hasSearched && arxivResults.length === 0 && !arxivSearching)) && (
              <div className="text-center p-12 text-[var(--color-text-muted)]">
                 <Search size={48} className="mx-auto mb-4 opacity-20" />
-                <p>No results found. Try a different search query.</p>
+                <p>{hasSearched ? "No results found for your search." : "No recommendations available yet. Try searching!"}</p>
              </div>
           )}
         </div>
