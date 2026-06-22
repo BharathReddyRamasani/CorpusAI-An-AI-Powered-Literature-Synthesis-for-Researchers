@@ -94,6 +94,7 @@ class ArxivImportRequest(BaseModel):
 
 class WebSearchRequest(BaseModel):
     question: str
+    paper_id: Optional[str] = None
 
 class PeerReviewRequest(BaseModel):
     paper_id: str

@@ -187,7 +187,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ paperId }) => {
     try {
       let res;
       if (useWebSearch) {
-        res = await researchApi.webSearch({ question })
+        res = await researchApi.webSearch({ question, paper_id: paperId })
       } else {
         if (selectedSection === 'All Sections') {
           res = await chatApi.askQuestion({ paper_id: paperId, question })

@@ -62,7 +62,7 @@ export const researchApi = {
     return response.data
   },
 
-  webSearch: async (data: { question: string }): Promise<GlobalChatResponse> => {
+  webSearch: async (data: { question: string, paper_id?: string }): Promise<GlobalChatResponse> => {
     const response = await api.post('/api/research/web-search', data)
     return response.data
   },

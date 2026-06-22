@@ -60,11 +60,17 @@ async def global_chat(
 )
 async def live_web_search(
     payload: WebSearchRequest,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> GlobalChatResponse:
     """Search the live web using duckduckgo and synthesize an answer."""
     from app.services.agents.web_agent import run
     res = await run(payload.question)
+    
+    if payload.paper_id:
+        from app.services.rag_service import _store_chat
+        await _store_chat(db, payload.paper_id, current_user.id, payload.question, res["answer"])
+        
     return GlobalChatResponse(answer=res["answer"], sources=res["sources"])
 
 @router.post(

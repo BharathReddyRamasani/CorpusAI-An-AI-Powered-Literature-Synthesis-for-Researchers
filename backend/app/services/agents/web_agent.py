@@ -41,7 +41,10 @@ async def search_duckduckgo(query: str, max_results: int = 3) -> list[str]:
 async def fetch_and_extract_text(url: str) -> str:
     """Download and extract clean text from a URL using Trafilatura or PyMuPDF."""
     try:
-        async with httpx.AsyncClient() as client:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+        }
+        async with httpx.AsyncClient(headers=headers) as client:
             res = await client.get(url, timeout=8.0, follow_redirects=True)
             res.raise_for_status()
             
