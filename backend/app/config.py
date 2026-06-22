@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     # ── Groq ──────────────────────────────────────────────────────────────────
     groq_api_key: str = ""
-    groq_model: str = "openai/gpt-oss-120b"
+    groq_model: str = "llama-3.1-8b-instant"
 
     # ── SQLite ────────────────────────────────────────────────────────────────
     database_url: str = "sqlite+aiosqlite:///./.data/research_assistant.db"
