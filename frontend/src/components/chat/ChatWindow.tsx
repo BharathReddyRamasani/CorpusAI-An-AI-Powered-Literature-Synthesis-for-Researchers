@@ -115,10 +115,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ paperId }) => {
     if (!synthRef.current) return
     synthRef.current.cancel() // Stop previous speaking
     
-    // Strip markdown formatting and code blocks for speech
+    // Strip markdown formatting, code blocks, bullet points, and citations for speech
     const cleanText = text.replace(/```[\s\S]*?```/g, 'Code block omitted.')
                           .replace(/[*_#`]/g, '')
+                          .replace(/-/g, '') // Remove dashes (bullet points)
+                          .replace(/\[.*?\]/g, '') // Remove inline citations like [1] or [Author, 2020]
                           .replace(/<[^>]*>?/gm, '')
+                          .replace(/\n+/g, '. ') // Replace newlines with periods for natural pauses
     
     const utterance = new SpeechSynthesisUtterance(cleanText)
     
