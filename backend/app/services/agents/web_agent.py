@@ -16,47 +16,39 @@ from app.utils.exceptions import ServiceException
 logger = logging.getLogger("app")
 
 async def search_duckduckgo(query: str, max_results: int = 3) -> list[str]:
-    """Scrape duckduckgo HTML for links."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
+    """Search duckduckgo using the duckduckgo_search package."""
     try:
-        async with httpx.AsyncClient() as client:
-            res = await client.post(
-                "https://html.duckduckgo.com/html/",
-                data={"q": query},
-                headers=headers,
-                timeout=10.0
-            )
-            res.raise_for_status()
-            
-            # Extract links using simple regex to avoid BS4 dependency issues
-            links = []
-            for match in re.finditer(r'class="result__url"\s+href="([^"]+)"', res.text):
-                url = match.group(1)
-                if url.startswith("//duckduckgo.com/l/?uddg="):
-                    # Clean up DDG redirect URL
-                    clean_url = unquote(url.split("uddg=")[1].split("&")[0])
-                    if clean_url not in links:
-                        links.append(clean_url)
-                else:
-                    if url not in links:
-                        links.append(url)
-                
-                if len(links) >= max_results:
-                    break
-            
-            return links
+        from duckduckgo_search import DDGS
+        import asyncio
+        
+        def _search():
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=max_results))
+                return [r.get("href") for r in results if r.get("href")]
+
+        loop = asyncio.get_event_loop()
+        links = await loop.run_in_executor(None, _search)
+        return links
     except Exception as e:
         logger.error(f"[Web Agent] Failed to search DuckDuckGo: {e}")
         return []
 
 async def fetch_and_extract_text(url: str) -> str:
-    """Download and extract clean text from a URL using Trafilatura."""
+    """Download and extract clean text from a URL using Trafilatura or PyMuPDF."""
     try:
         async with httpx.AsyncClient() as client:
             res = await client.get(url, timeout=8.0, follow_redirects=True)
             res.raise_for_status()
+            
+            content_type = res.headers.get('content-type', '').lower()
+            if 'application/pdf' in content_type or url.lower().endswith('.pdf'):
+                import fitz
+                doc = fitz.open(stream=res.content, filetype="pdf")
+                text = ""
+                for page in doc:
+                    text += page.get_text()
+                return text
+
             text = trafilatura.extract(res.text, include_comments=False, include_tables=False)
             return text if text else ""
     except Exception as e:

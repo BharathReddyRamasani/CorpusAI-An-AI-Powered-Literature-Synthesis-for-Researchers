@@ -59,7 +59,7 @@ def get_llm_with_rotation(tools_list=None):
             model_name=settings.groq_model,
             groq_api_key=key,
             temperature=0.2,
-            max_retries=0,
+            max_retries=5,
         )
         for key in keys
     ]

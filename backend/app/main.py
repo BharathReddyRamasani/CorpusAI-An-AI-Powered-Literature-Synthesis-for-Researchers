@@ -15,6 +15,13 @@ import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
+# Monkeypatch bcrypt for passlib compatibility with bcrypt >= 4.0
+import bcrypt
+if not hasattr(bcrypt, "__about__"):
+    class About:
+        __version__ = getattr(bcrypt, "__version__", "4.0.0")
+    bcrypt.__about__ = About
+
 import os
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles

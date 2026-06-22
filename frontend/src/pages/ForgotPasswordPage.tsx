@@ -33,7 +33,7 @@ const ForgotPasswordPage = () => {
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     try {
       setIsLoading(true);
-      await authApi.forgotPassword(data.email);
+      await authApi.forgotPassword({ email: data.email });
       setSubmittedEmail(data.email);
       setIsSubmitted(true);
     } catch (error: any) {

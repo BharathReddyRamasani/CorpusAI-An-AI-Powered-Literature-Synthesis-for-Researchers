@@ -1,6 +1,7 @@
 import logging
 import asyncio
 from groq import AsyncGroq, InternalServerError, RateLimitError, APIConnectionError
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
 from app.config import settings
 from app.utils.exceptions import ServiceException
@@ -22,6 +23,12 @@ def _get_cached_client(api_key: str):
         logger.debug(f"[Groq] Cached new client instance for key ...{api_key[-4:]}")
     return _client_cache[api_key]
 
+@retry(
+    wait=wait_exponential(multiplier=1.5, min=3, max=30),
+    stop=stop_after_attempt(12),
+    retry=retry_if_exception_type((RateLimitError, InternalServerError, APIConnectionError)),
+    reraise=True
+)
 async def call_groq_api_with_rotation(prompt: str, system_prompt: str, is_json: bool = False) -> str:
     global _current_key_index
     keys = _get_api_keys()
@@ -30,55 +37,36 @@ async def call_groq_api_with_rotation(prompt: str, system_prompt: str, is_json: 
         raise ServiceException("No Groq API keys configured.")
 
     model_name = settings.groq_model
-    attempts = 0
-    max_attempts = len(keys) * 2
+    current_key = keys[_current_key_index % len(keys)]
     
-    while attempts < max_attempts:
-        current_key = keys[_current_key_index % len(keys)]
+    try:
+        client = _get_cached_client(current_key)
         
-        try:
-            client = _get_cached_client(current_key)
-            
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ]
-            
-            kwargs = {
-                "messages": messages,
-                "model": model_name,
-            }
-            if is_json:
-                kwargs["response_format"] = {"type": "json_object"}
-            
-            response = await client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content
-            
-        except RateLimitError as e:
-            logger.warning(f"Key {_current_key_index + 1}/{len(keys)} hit RateLimitError. Rotating to next key...")
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+        
+        kwargs = {
+            "messages": messages,
+            "model": model_name,
+        }
+        if is_json:
+            kwargs["response_format"] = {"type": "json_object"}
+        
+        response = await client.chat.completions.create(**kwargs)
+        return response.choices[0].message.content
+        
+    except (RateLimitError, InternalServerError, APIConnectionError) as e:
+        logger.warning(f"Groq API Error ({type(e).__name__}): {e}. Rotating key and retrying...")
+        _current_key_index = (_current_key_index + 1) % len(keys)
+        raise # Let tenacity handle the sleep and retry
+    except Exception as e:
+        if "invalid_api_key" in str(e).lower() or "401" in str(e):
+            logger.warning(f"Invalid API key detected: {e}. Rotating to next key...")
             _current_key_index = (_current_key_index + 1) % len(keys)
-            attempts += 1
-            
-            if attempts >= len(keys):
-                sleep_time = min(5, 1.5 ** (attempts - len(keys)))
-                logger.info(f"All keys exhausted, sleeping for {sleep_time:.1f}s before retrying...")
-                await asyncio.sleep(sleep_time)
-                
-        except (InternalServerError, APIConnectionError) as e:
-            logger.warning(f"Groq API Error ({type(e).__name__}): {e}. Rotating to next key...")
-            _current_key_index = (_current_key_index + 1) % len(keys)
-            attempts += 1
-            if attempts >= len(keys):
-                await asyncio.sleep(2)
-                
-        except Exception as e:
-            if "invalid_api_key" in str(e).lower() or "401" in str(e):
-                logger.warning(f"Invalid API key detected: {e}. Rotating to next key...")
-                _current_key_index = (_current_key_index + 1) % len(keys)
-                attempts += 1
-            else:
-                logger.error(f"Groq API Error: {e}", exc_info=True)
-                raise ServiceException(f"Groq API failed: {str(e)}")
-
-    logger.error("All Groq API keys exhausted.")
-    raise ServiceException("All Groq API keys are currently unavailable.")
+            # Raise a retryable error to trigger tenacity
+            raise APIConnectionError(request=None) 
+        else:
+            logger.error(f"Groq API Error: {e}", exc_info=True)
+            raise ServiceException(f"Groq API failed: {str(e)}")
