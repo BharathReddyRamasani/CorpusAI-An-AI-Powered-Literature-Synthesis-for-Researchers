@@ -25,8 +25,16 @@ COPY backend/ ./backend/
 # Copy built frontend from Stage 1 into the backend folder
 COPY --from=frontend-builder /app/frontend/dist ./backend/frontend_dist
 
-# Create storage directories
-RUN mkdir -p /app/backend/uploads /app/backend/reports /app/backend/chroma_db
+# Configure persistent storage for Hugging Face Spaces (mounted at /data)
+ENV DATABASE_URL="sqlite+aiosqlite:////data/research_assistant.db" \
+    CHROMA_PERSIST_DIR="/data/chroma_db" \
+    UPLOAD_DIR="/data/uploads" \
+    REPORTS_DIR="/data/reports" \
+    LOG_FILE="/data/logs/app.log"
+
+# Create storage directories and set permissions (fallback if persistent storage is off)
+RUN mkdir -p /data/uploads /data/reports /data/chroma_db /data/logs && \
+    chmod -R 777 /data
 
 # Expose Hugging Face Port
 EXPOSE 7860
