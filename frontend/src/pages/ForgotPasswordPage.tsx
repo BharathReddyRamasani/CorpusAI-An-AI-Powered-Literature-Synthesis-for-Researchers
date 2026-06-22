@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion } from 'framer-motion';
-import { Mail, Upload, Search, LineChart, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Mail, Upload, Search, LineChart, ArrowLeft, CheckCircle2, Lock, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authApi } from '../api/auth';
 import { Input } from '../components/ui/Input';
@@ -15,31 +15,65 @@ const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address'),
 });
 
+const resetPasswordSchema = z.object({
+  otp: z.string().min(6, 'OTP must be at least 6 characters'),
+  new_password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirm_password: z.string()
+}).refine((data) => data.new_password === data.confirm_password, {
+  message: "Passwords don't match",
+  path: ["confirm_password"],
+});
+
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 const ForgotPasswordPage = () => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submittedEmail, setSubmittedEmail] = useState('');
 
   const {
-    register,
-    handleSubmit,
-    formState: { errors },
+    register: registerForgot,
+    handleSubmit: handleForgotSubmit,
+    formState: { errors: forgotErrors },
   } = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
   });
 
-  const onSubmit = async (data: ForgotPasswordFormValues) => {
+  const {
+    register: registerReset,
+    handleSubmit: handleResetSubmit,
+    formState: { errors: resetErrors },
+  } = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+  });
+
+  const onForgotSubmit = async (data: ForgotPasswordFormValues) => {
     try {
       setIsLoading(true);
       await authApi.forgotPassword({ email: data.email });
       setSubmittedEmail(data.email);
-      setIsSubmitted(true);
+      setStep(2);
+      toast.success('OTP sent to your email');
     } catch (error: any) {
       console.error(error);
-      // Even if it fails (e.g. user not found), we should probably show success to prevent email enumeration
-      // But we'll just show a generic error toast via interceptor and not advance state
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onResetSubmit = async (data: ResetPasswordFormValues) => {
+    try {
+      setIsLoading(true);
+      await authApi.resetPassword({
+        email: submittedEmail,
+        otp: data.otp,
+        new_password: data.new_password
+      });
+      setStep(3);
+    } catch (error: any) {
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +128,7 @@ const ForgotPasswordPage = () => {
           className="w-full max-w-[440px] z-10"
         >
           <div className="card-surface p-10 shadow-xl">
-            {!isSubmitted ? (
+            {step === 1 && (
               <>
                 <div className="mb-8">
                   <div className="lg:hidden flex mb-6">
@@ -105,35 +139,84 @@ const ForgotPasswordPage = () => {
                     Back to login
                   </Link>
                   <h2 className="font-display text-3xl font-bold tracking-tight text-[var(--color-text-primary)] mb-2">Reset password</h2>
-                  <p className="text-[var(--color-text-secondary)]">Enter your email address and we'll send you a link to reset your password.</p>
+                  <p className="text-[var(--color-text-secondary)]">Enter your email address and we'll send you an OTP to reset your password.</p>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+                <form onSubmit={handleForgotSubmit(onForgotSubmit)} className="flex flex-col gap-6">
                   <Input
                     label="Email"
                     type="email"
                     placeholder="you@example.com"
                     icon={<Mail size={20} />}
-                    {...register('email')}
-                    error={errors.email?.message}
+                    {...registerForgot('email')}
+                    error={forgotErrors.email?.message}
                   />
 
                   <Button type="submit" size="lg" isLoading={isLoading} className="w-full mt-2">
-                    Send Reset Link
+                    Send OTP
                   </Button>
                 </form>
               </>
-            ) : (
+            )}
+
+            {step === 2 && (
+              <>
+                <div className="mb-8">
+                  <button onClick={() => setStep(1)} className="inline-flex items-center text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors mb-6">
+                    <ArrowLeft size={16} className="mr-2" />
+                    Back
+                  </button>
+                  <h2 className="font-display text-3xl font-bold tracking-tight text-[var(--color-text-primary)] mb-2">Verify OTP</h2>
+                  <p className="text-[var(--color-text-secondary)]">
+                    We've sent a code to <strong className="text-[var(--color-text-primary)]">{submittedEmail}</strong>. Enter it below along with your new password.
+                  </p>
+                </div>
+
+                <form onSubmit={handleResetSubmit(onResetSubmit)} className="flex flex-col gap-6">
+                  <Input
+                    label="6-Digit OTP"
+                    placeholder="123456"
+                    icon={<KeyRound size={20} />}
+                    {...registerReset('otp')}
+                    error={resetErrors.otp?.message}
+                  />
+
+                  <Input
+                    label="New Password"
+                    type="password"
+                    placeholder="••••••••"
+                    icon={<Lock size={20} />}
+                    {...registerReset('new_password')}
+                    error={resetErrors.new_password?.message}
+                  />
+
+                  <Input
+                    label="Confirm New Password"
+                    type="password"
+                    placeholder="••••••••"
+                    icon={<Lock size={20} />}
+                    {...registerReset('confirm_password')}
+                    error={resetErrors.confirm_password?.message}
+                  />
+
+                  <Button type="submit" size="lg" isLoading={isLoading} className="w-full mt-2">
+                    Reset Password
+                  </Button>
+                </form>
+              </>
+            )}
+
+            {step === 3 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-4">
                 <div className="inline-flex p-4 rounded-full bg-green-500/10 mb-6">
                   <CheckCircle2 size={40} className="text-green-500" />
                 </div>
-                <h2 className="font-display text-2xl font-bold tracking-tight text-[var(--color-text-primary)] mb-4">Check your email</h2>
+                <h2 className="font-display text-2xl font-bold tracking-tight text-[var(--color-text-primary)] mb-4">Password Reset!</h2>
                 <p className="text-[var(--color-text-secondary)] mb-8 leading-relaxed">
-                  We've sent password reset instructions to <strong className="text-[var(--color-text-primary)]">{submittedEmail}</strong>.
+                  Your password has been successfully updated. You can now log in with your new credentials.
                 </p>
                 <Link to="/login">
-                  <Button variant="outline" className="w-full">
+                  <Button className="w-full">
                     Return to Login
                   </Button>
                 </Link>
