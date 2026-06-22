@@ -117,11 +117,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ paperId }) => {
     
     // Strip markdown formatting, code blocks, bullet points, and citations for speech
     const cleanText = text.replace(/```[\s\S]*?```/g, 'Code block omitted.')
-                          .replace(/[*_#`]/g, '')
-                          .replace(/-/g, '') // Remove dashes (bullet points)
-                          .replace(/\[.*?\]/g, '') // Remove inline citations like [1] or [Author, 2020]
-                          .replace(/<[^>]*>?/gm, '')
+                          .replace(/\[.*?\]/g, '') // Remove inline citations like [1]
+                          .replace(/<[^>]*>?/gm, '') // Remove HTML tags
+                          .replace(/[-=_*~#<>|\\+{}`]/g, ' ') // Replace markdown/formatting symbols with space
                           .replace(/\n+/g, '. ') // Replace newlines with periods for natural pauses
+                          .replace(/\s{2,}/g, ' ') // Collapse multiple spaces into one
     
     const utterance = new SpeechSynthesisUtterance(cleanText)
     
