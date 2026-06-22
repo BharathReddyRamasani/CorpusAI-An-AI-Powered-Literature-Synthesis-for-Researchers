@@ -19,7 +19,7 @@ def _get_api_keys() -> list[str]:
 
 def _get_cached_client(api_key: str):
     if api_key not in _client_cache:
-        _client_cache[api_key] = AsyncGroq(api_key=api_key)
+        _client_cache[api_key] = AsyncGroq(api_key=api_key, max_retries=0)
         logger.debug(f"[Groq] Cached new client instance for key ...{api_key[-4:]}")
     return _client_cache[api_key]
 

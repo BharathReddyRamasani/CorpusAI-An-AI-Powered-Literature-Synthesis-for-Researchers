@@ -59,7 +59,11 @@ Full Text (partial): {paper.full_text[:15000] if paper.full_text else ""}
     try:
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
-        
+    except Exception as e:
+        logger.error(f"Failed to parse JSON for insights: {response_text}")
+        raise ServiceException("Failed to generate research insights.")
+
+    try:
         insight = ResearchInsight(
             paper_id=paper_id,
             contributions=json.dumps(data.get("contributions", [])),
@@ -69,11 +73,12 @@ Full Text (partial): {paper.full_text[:15000] if paper.full_text else ""}
         )
         db.add(insight)
         await db.flush()
-        
-        return InsightResponse(**data)
     except Exception as e:
-        logger.error(f"Failed to parse JSON for insights: {response_text}")
-        raise ServiceException("Failed to generate research insights.")
+        await db.rollback()
+        # Log the error but continue, returning the data we just generated
+        logger.warning(f"Could not save insights to DB (likely already exists): {e}")
+        
+    return InsightResponse(**data)
 
 
 async def get_visualizations(db: AsyncSession, paper_id: str, user_id: int) -> VisualizationResponse:
@@ -116,16 +121,20 @@ Results Section: {paper.full_text[:15000] if paper.full_text else ""}
     try:
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
-        
+    except Exception as e:
+        logger.error(f"Failed to parse JSON for visualizations: {response_text}")
+        return VisualizationResponse(charts=[])
+
+    try:
         vis = Visualization(
             paper_id=paper_id,
             charts_data=json.dumps(data.get("charts", []))
         )
         db.add(vis)
         await db.flush()
-        
-        return VisualizationResponse(**data)
     except Exception as e:
-        logger.error(f"Failed to parse JSON for visualizations: {response_text}")
-        # If extraction fails, gracefully return empty charts instead of failing the page load
-        return VisualizationResponse(charts=[])
+        await db.rollback()
+        # Log the error but continue, returning the data we just generated
+        logger.warning(f"Could not save visualizations to DB (likely already exists): {e}")
+        
+    return VisualizationResponse(**data)
