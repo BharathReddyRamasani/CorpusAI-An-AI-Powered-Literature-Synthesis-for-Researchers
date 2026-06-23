@@ -100,7 +100,7 @@ async def translate_text(
     """Translate text to the target language on the fly."""
     from app.utils.groq_client import call_groq_api_with_rotation
     system = f"You are a professional academic translator. Translate the given text to {payload.target_language}. Return ONLY the translated text."
-    translated = await call_groq_api_with_rotation(payload.text, system)
+    translated = await call_groq_api_with_rotation(payload.text, system, max_tokens=1000)
     return TranslateResponse(translated_text=translated)
 
 @router.post(

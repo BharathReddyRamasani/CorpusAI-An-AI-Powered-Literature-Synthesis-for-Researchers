@@ -58,6 +58,7 @@ const ForgotPasswordPage = () => {
       toast.success('OTP sent to your email');
     } catch (error: any) {
       console.error(error);
+      toast.error(error.response?.data?.detail || "User does not exist with this email.");
     } finally {
       setIsLoading(false);
     }

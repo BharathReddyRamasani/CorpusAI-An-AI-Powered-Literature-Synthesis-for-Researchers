@@ -58,7 +58,12 @@ Full Text (partial): {paper.full_text[:8000] if paper.full_text else ""}
     response_text = await call_groq_api_with_rotation(prompt, system_prompt, max_tokens=800)
     try:
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
-        data = json.loads(clean_text)
+        start = clean_text.find("{")
+        end = clean_text.rfind("}")
+        if start != -1 and end != -1:
+            data = json.loads(clean_text[start:end + 1])
+        else:
+            data = json.loads(clean_text)
     except Exception as e:
         logger.error(f"Failed to parse JSON for insights: {response_text}")
         raise ServiceException("Failed to generate research insights.")
@@ -120,7 +125,12 @@ Results Section: {paper.full_text[:8000] if paper.full_text else ""}
     response_text = await call_groq_api_with_rotation(prompt, system_prompt, max_tokens=800)
     try:
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
-        data = json.loads(clean_text)
+        start = clean_text.find("{")
+        end = clean_text.rfind("}")
+        if start != -1 and end != -1:
+            data = json.loads(clean_text[start:end + 1])
+        else:
+            data = json.loads(clean_text)
     except Exception as e:
         logger.error(f"Failed to parse JSON for visualizations: {response_text}")
         return VisualizationResponse(charts=[])

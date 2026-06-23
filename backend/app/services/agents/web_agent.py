@@ -70,7 +70,7 @@ async def run(question: str) -> dict:
     # 1. Search the web for the question
     # We ask Groq to generate an optimal search query first
     query_prompt = f"Convert the following user question into a short, effective Google search query (maximum 5 words). Return ONLY the search query string, nothing else.\n\nQuestion: {question}"
-    search_query = await call_groq_api_with_rotation(query_prompt, "You are a web search assistant.")
+    search_query = await call_groq_api_with_rotation(query_prompt, "You are a web search assistant.", max_tokens=50)
     search_query = search_query.replace('"', '').strip()
     
     logger.info(f"[Web Agent] Optimized query: {search_query}")
@@ -113,7 +113,7 @@ Web Context:
 Please provide a comprehensive answer based ONLY on the context provided above.
 """
 
-    answer = await call_groq_api_with_rotation(user_prompt, system_prompt)
+    answer = await call_groq_api_with_rotation(user_prompt, system_prompt, max_tokens=1500)
     
     return {
         "answer": answer,

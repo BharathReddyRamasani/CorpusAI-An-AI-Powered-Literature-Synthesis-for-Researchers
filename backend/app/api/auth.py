@@ -38,7 +38,7 @@ from app.services.auth_service import (
 )
 from app.services.email_service import send_otp_email
 from app.utils.dependencies import get_current_user, get_db
-from app.utils.exceptions import BadRequestException, ConflictException, UnauthorizedException
+from app.utils.exceptions import BadRequestException, ConflictException, UnauthorizedException, NotFoundException
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 logger = logging.getLogger("app")
@@ -273,10 +273,9 @@ async def forgot_password(
     result = await db.execute(select(User).where(User.email == payload.email))
     user = result.scalar_one_or_none()
 
-    # To prevent email enumeration, we always return success even if user doesn't exist
     if not user:
         logger.info(f"Forgot password requested for non-existent email: {payload.email}")
-        return {"success": True, "message": "If an account with that email exists, an OTP has been sent."}
+        raise NotFoundException("User does not exist with this email.")
 
     # Generate 6 digit OTP
     otp = "".join(random.choices(string.digits, k=6))

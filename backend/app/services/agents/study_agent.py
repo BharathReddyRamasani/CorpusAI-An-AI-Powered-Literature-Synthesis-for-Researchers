@@ -45,7 +45,7 @@ async def run(task: str, paper_id: str, db, paper_title: str = "", paper_abstrac
     logger.info(f"[Study Agent] task={task}, paper_id={paper_id}")
 
     full_text = await fetch_paper_text_async(paper_id, db)
-    text_excerpt = (full_text or "")[:10000]
+    text_excerpt = (full_text or "")[:5000]
 
     if task == "flashcards":
         prompt = f"""Generate 10 flashcards from the following research paper.
@@ -59,7 +59,7 @@ Paper Title: {paper_title}
 Abstract: {paper_abstract}
 Full Text (partial): {text_excerpt}
 """
-        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT)
+        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT, max_tokens=1000)
         try:
             return _clean_json(raw)
         except Exception:
@@ -82,7 +82,7 @@ Paper Title: {paper_title}
 Abstract: {paper_abstract}
 Full Text (partial): {text_excerpt}
 """
-        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT)
+        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT, max_tokens=1000)
         try:
             return _clean_json(raw)
         except Exception:

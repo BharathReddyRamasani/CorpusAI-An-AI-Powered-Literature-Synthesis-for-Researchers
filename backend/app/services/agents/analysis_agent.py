@@ -79,7 +79,7 @@ Return the result STRICTLY as a JSON object with this exact structure:
 Citations:
 {context}
 """
-        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT)
+        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT, max_tokens=1500)
         try:
             return _clean_json(raw)
         except Exception:
@@ -101,7 +101,7 @@ Return the result STRICTLY as a JSON object with this exact structure:
 Papers:
 {context}
 """
-        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT)
+        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT, max_tokens=1500)
         try:
             return _clean_json(raw)
         except Exception:
@@ -125,7 +125,7 @@ Return the result STRICTLY as a JSON object with this exact structure:
 Papers:
 {context}
 """
-        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT)
+        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT, max_tokens=1500)
         try:
             return _clean_json(raw)
         except Exception:
@@ -145,7 +145,7 @@ Return the result STRICTLY as a JSON object with this exact structure:
 Papers:
 {context}
 """
-        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT)
+        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT, max_tokens=1500)
         try:
             return _clean_json(raw)
         except Exception:
@@ -166,7 +166,7 @@ Return the result STRICTLY as a JSON object with this exact structure:
 Papers:
 {context}
 """
-        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT_LIT)
+        raw = await call_groq_api_with_rotation(prompt, _SYSTEM_PROMPT_LIT, max_tokens=1500)
         try:
             return _clean_json(raw)
         except Exception:

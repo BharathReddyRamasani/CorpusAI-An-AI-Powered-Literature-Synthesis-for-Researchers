@@ -74,17 +74,17 @@ async def _generate_report_content(db: AsyncSession, paper_id: str) -> str:
     prompt = REPORT_USER_PROMPT.format(
         title=(paper.title or paper.filename)[:500],
         authors=(paper.authors or "Unknown")[:500],
-        abstract=(paper.abstract or "Not available")[:3000],
-        summary=summary_text[:10000],
+        abstract=(paper.abstract or "Not available")[:2000],
+        summary=summary_text[:4000],
         citation_count=len(citations),
-        citations=citations_text[:4000],
-        qa_insights=qa_text[:4000],
+        citations=citations_text[:2000],
+        qa_insights=qa_text[:2000],
     )
 
     logger.info(f"Generating report content via Groq for paper_id={paper_id}")
 
     try:
-        return await call_groq_api_with_rotation(prompt, REPORT_SYSTEM_PROMPT)
+        return await call_groq_api_with_rotation(prompt, REPORT_SYSTEM_PROMPT, max_tokens=2000)
     except Exception as e:
         logger.error(f"Groq report generation failed: {e}", exc_info=True)
         raise ServiceException(f"Report generation failed: {str(e)}")

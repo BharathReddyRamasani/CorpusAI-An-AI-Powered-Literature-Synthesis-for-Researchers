@@ -59,7 +59,7 @@ Paper content:
 {context}
 """
 
-    raw = await call_groq_api_with_rotation(user_prompt, system_prompt)
+    raw = await call_groq_api_with_rotation(user_prompt, system_prompt, max_tokens=1000)
     try:
         return _clean_json(raw)
     except Exception as e:
