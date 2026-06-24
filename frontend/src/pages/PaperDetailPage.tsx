@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   FileText, Download, MessageSquare, BookOpen, Clock,
-  CheckCircle, AlertTriangle, FileOutput, BarChart2, Lightbulb, ArrowLeft, ShieldAlert
+  CheckCircle, AlertTriangle, FileOutput, BarChart2, Lightbulb, ArrowLeft, ShieldAlert, Headphones
 } from 'lucide-react';
 import { papersApi, PaperDetail, Summary, Citation } from '../api/papers';
 import { reportsApi } from '../api/reports';
@@ -66,6 +66,9 @@ const PaperDetailPage = () => {
   const [targetLanguage, setTargetLanguage] = useState('Spanish');
   const [translating, setTranslating] = useState(false);
   const [translatedSummary, setTranslatedSummary] = useState<string | null>(null);
+  
+  const [podcastUrl, setPodcastUrl] = useState<string | null>(null);
+  const [generatingPodcast, setGeneratingPodcast] = useState(false);
 
   useEffect(() => {
     if (!paperId) return;
@@ -158,6 +161,7 @@ const PaperDetailPage = () => {
     { id: 'reviewer',  label: 'Reviewer 2',  icon: <ShieldAlert size={15} /> },
     { id: 'citations', label: 'Citations',   icon: <FileOutput size={15} /> },
     { id: 'reports',   label: 'Reports',     icon: <Download size={15} /> },
+    { id: 'podcast',   label: 'Podcast',     icon: <Headphones size={15} /> },
   ];
 
   return (
@@ -411,6 +415,51 @@ const PaperDetailPage = () => {
                   Generate DOCX Report
                 </Button>
               </div>
+            </Card>
+          )}
+
+          {/* Podcast */}
+          {activeTab === 'podcast' && isReady && paperId && (
+            <Card className="p-8 border-[var(--color-border)] glass">
+              <div className="mb-8 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-rose-500/15 text-rose-500">
+                    <Headphones size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-2xl font-bold tracking-tight">Audio Podcast</h3>
+                    <p className="text-[var(--color-text-secondary)] text-sm mt-1">Generate an AI-hosted audio discussion of this paper.</p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={async () => {
+                    setGeneratingPodcast(true);
+                    try {
+                      const blob = await researchApi.generatePodcast({ paper_ids: [paperId] });
+                      setPodcastUrl(URL.createObjectURL(blob));
+                      toast.success('Podcast generated!');
+                    } catch { 
+                      toast.error('Failed to generate podcast');
+                    } finally { 
+                      setGeneratingPodcast(false);
+                    }
+                  }} 
+                  isLoading={generatingPodcast} 
+                >
+                  Generate Podcast
+                </Button>
+              </div>
+
+              {podcastUrl && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card-surface p-8 rounded-[20px] flex flex-col items-center justify-center border-[color-mix(in_srgb,var(--color-primary)_30%,transparent)] shadow-lg shadow-[var(--color-primary)]/10 mt-6">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-rose-400 to-pink-600 mb-6 flex items-center justify-center shadow-inner">
+                    <Headphones size={40} className="text-white" />
+                  </div>
+                  <h4 className="font-display text-xl font-bold mb-2 text-[var(--color-text-primary)]">Your Research Podcast is Ready</h4>
+                  <p className="text-[var(--color-text-secondary)] mb-8 text-center max-w-md">Listen to an engaging audio summary of this research paper.</p>
+                  <audio controls src={podcastUrl} className="w-full max-w-md" autoPlay />
+                </motion.div>
+              )}
             </Card>
           )}
 

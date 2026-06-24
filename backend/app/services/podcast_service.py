@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.paper import Paper
-from app.services.agents.tools import get_llm
+from app.services.agents.tools import get_llm_with_rotation
 
 logger = logging.getLogger("app")
 
@@ -47,7 +47,7 @@ Just output the raw text exactly as it should be spoken.
 Papers:
 {context}
 """
-    llm = get_llm()
+    llm = get_llm_with_rotation()
     try:
         response = await llm.ainvoke(prompt)
         script = response.content
@@ -67,19 +67,21 @@ Papers:
     
     logger.info(f"[Podcast Service] Generating audio to {output_path}")
     
-    # Run edge-tts as a subprocess
-    process = await asyncio.create_subprocess_exec(
-        "edge-tts",
-        "--voice", voice,
-        "--text", script,
-        "--write-media", str(output_path),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await process.communicate()
+    import subprocess
+    
+    # Run edge-tts in a separate thread to avoid blocking the event loop
+    # and to bypass Windows asyncio subprocess limitations in Uvicorn
+    def run_tts():
+        return subprocess.run(
+            ["edge-tts", "--voice", voice, "--text", script, "--write-media", str(output_path)],
+            capture_output=True,
+            text=True
+        )
+        
+    process = await asyncio.to_thread(run_tts)
     
     if process.returncode != 0:
-        error_msg = stderr.decode()
+        error_msg = process.stderr
         logger.error(f"edge-tts failed: {error_msg}")
         raise Exception(f"TTS Generation failed: {error_msg}")
         

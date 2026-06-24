@@ -168,7 +168,7 @@ const GlobalResearchPage = () => {
     { id: 'literature', label: 'Lit Review',  icon: <BookOpen size={16} />,      accent: '#8b5cf6' },
     { id: 'citation',   label: 'Citations',   icon: <Quote size={16} />,         accent: '#ec4899' },
     { id: 'timeline',   label: 'Timeline',    icon: <Clock size={16} />,         accent: 'var(--color-accent)' },
-
+    { id: 'podcast',    label: 'Podcast',     icon: <Headphones size={16} />,    accent: '#f43f5e' },
   ] as const
 
   const activeAccent = tabs.find(t => t.id === activeTab)?.accent

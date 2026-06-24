@@ -27,3 +27,6 @@ Thumbs.db
 # IDEs
 .idea/
 .vscode/
+
+# Documents
+*.pptx
